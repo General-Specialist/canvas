@@ -3,7 +3,7 @@ import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
 import { Trash, Palette } from '@phosphor-icons/react';
 import { GroupNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
-import { expandGroupEdges } from '../../utils/edgeUtils';
+import { expandGroupEdges, syncAutoEdges } from '../../utils/edgeUtils';
 
 const COLOR_THEMES: Record<string, { bg: string; border: string; text: string }> = {
   blue: {
@@ -53,8 +53,8 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
 
   const updateGroupData = useCallback(
     (updates: Partial<GroupNodeData>) => {
-      setNodes((nds) =>
-        nds.map((n) => {
+      setNodes((nds) => {
+        const updatedNodes = nds.map((n) => {
           if (n.id === id) {
             return {
               ...n,
@@ -65,10 +65,13 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
             };
           }
           return n;
-        })
-      );
+        });
+
+        setEdges((eds) => syncAutoEdges(updatedNodes, eds) as CanvasEdge[]);
+        return updatedNodes;
+      });
     },
-    [id, setNodes]
+    [id, setNodes, setEdges]
   );
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

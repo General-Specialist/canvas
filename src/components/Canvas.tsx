@@ -31,11 +31,11 @@ import {
   saveViewport,
 } from '../utils/storage';
 import {
-  optimizeAllEdges,
   getNodeAbsolutePos,
-  consolidateGroupEdges,
+  syncAutoEdges,
   expandGroupEdges,
   ensureGroupTitleClearance,
+  autoWrapConnectedNodeTitles,
 } from '../utils/edgeUtils';
 
 const nodeTypes = {
@@ -308,17 +308,18 @@ const InnerCanvas: React.FC = () => {
     };
   }, [executeGroup, handleUngroupSelectedNodes]);
 
-  // Dynamic Minimum Length Edge Optimization on Node Drag
+  // Dynamic Edge Sync & Handle Optimization on Node Drag
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
     (_event, _node, allNodes) => {
-      setEdges((prevEdges) => optimizeAllEdges(allNodes, prevEdges) as CanvasEdge[]);
+      setEdges((prevEdges) => syncAutoEdges(allNodes, prevEdges) as CanvasEdge[]);
     },
     [setEdges]
   );
 
-  // Native Handle Connection with Group Edge Consolidation
+  // Native Handle Connection with Auto Edge Sync and Title Auto-Wrapping
   const handleConnect = useCallback(
     (connection: Connection) => {
+      let updatedEdgesList: CanvasEdge[] = [];
       setEdges((eds) => {
         const newEdges = addEdge(
           {
@@ -329,22 +330,36 @@ const InnerCanvas: React.FC = () => {
           },
           eds
         );
-        return consolidateGroupEdges(nodes, newEdges) as CanvasEdge[];
+        updatedEdgesList = syncAutoEdges(nodes, newEdges) as CanvasEdge[];
+        return updatedEdgesList;
+      });
+
+      setNodes((currentNodes) => {
+        const { updatedNodes, modified } = autoWrapConnectedNodeTitles(currentNodes, updatedEdgesList);
+        return modified ? updatedNodes : currentNodes;
       });
     },
-    [nodes, setEdges]
+    [nodes, setNodes, setEdges]
   );
 
-  // Auto-consolidate group edges when all child nodes in a group are connected
+  // Auto-sync wiki link edges, title auto-wrapping, and group auto edges
   useEffect(() => {
+    setNodes((currentNodes) => {
+      const { updatedNodes, modified } = autoWrapConnectedNodeTitles(currentNodes, edges);
+      if (modified) {
+        return updatedNodes;
+      }
+      return currentNodes;
+    });
+
     setEdges((prevEdges) => {
-      const consolidated = consolidateGroupEdges(nodes, prevEdges) as CanvasEdge[];
-      if (JSON.stringify(consolidated) !== JSON.stringify(prevEdges)) {
-        return consolidated;
+      const synced = syncAutoEdges(nodes, prevEdges) as CanvasEdge[];
+      if (JSON.stringify(synced) !== JSON.stringify(prevEdges)) {
+        return synced;
       }
       return prevEdges;
     });
-  }, [nodes, setEdges]);
+  }, [nodes, edges, setNodes, setEdges]);
 
   // Add New Note Node
   const handleAddNote = useCallback(

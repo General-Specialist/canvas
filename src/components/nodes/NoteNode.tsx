@@ -3,8 +3,11 @@ import { NodeProps, useReactFlow } from '@xyflow/react';
 import { NoteNodeData } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
 
+import { syncAutoEdges } from '../../utils/edgeUtils';
+import { CanvasEdge } from '../../types/canvas';
+
 export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
-  const { setNodes } = useReactFlow();
+  const { setNodes, setEdges } = useReactFlow();
   const nodeData = data as unknown as NoteNodeData;
 
   const [localTitle, setLocalTitle] = useState(nodeData.title || '');
@@ -42,8 +45,8 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
   }, [localContent]);
 
   const updateNodeData = (updates: Partial<NoteNodeData>) => {
-    setNodes((nds) =>
-      nds.map((node) => {
+    setNodes((nds) => {
+      const updatedNodes = nds.map((node) => {
         if (node.id === id) {
           return {
             ...node,
@@ -55,8 +58,11 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
           };
         }
         return node;
-      })
-    );
+      });
+
+      setEdges((eds) => syncAutoEdges(updatedNodes, eds) as CanvasEdge[]);
+      return updatedNodes;
+    });
   };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

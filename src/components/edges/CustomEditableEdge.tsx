@@ -8,8 +8,13 @@ import {
 } from '@xyflow/react';
 import { GitCommit, X } from '@phosphor-icons/react';
 
+import { expandGroupEdges } from '../../utils/edgeUtils';
+import { CanvasEdge } from '../../types/canvas';
+
 export const CustomEditableEdge: React.FC<EdgeProps> = ({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -20,7 +25,7 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
   markerEnd,
   selected,
 }) => {
-  const { setEdges, setNodes } = useReactFlow();
+  const { setEdges, setNodes, getNodes } = useReactFlow();
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -49,7 +54,21 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
 
   const deleteEdge = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setEdges((eds) => eds.filter((edge) => edge.id !== id));
+    const currentNodes = getNodes();
+    const sourceNode = currentNodes.find((n) => n.id === source);
+    const targetNode = currentNodes.find((n) => n.id === target);
+    const isGroupConnection = sourceNode?.type === 'groupNode' || targetNode?.type === 'groupNode';
+
+    setEdges((eds) => {
+      const remainingEdges = eds.filter((edge) => edge.id !== id);
+      if (isGroupConnection) {
+        const groupIds = new Set<string>();
+        if (sourceNode?.type === 'groupNode') groupIds.add(sourceNode.id);
+        if (targetNode?.type === 'groupNode') groupIds.add(targetNode.id);
+        return expandGroupEdges(groupIds, currentNodes, remainingEdges) as CanvasEdge[];
+      }
+      return remainingEdges;
+    });
   };
 
   return (
