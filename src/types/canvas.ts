@@ -13,7 +13,13 @@ interface EdgeJunctionNodeData {
   [key: string]: unknown;
 }
 
-export type CanvasNode = Node<NoteNodeData | EdgeJunctionNodeData>;
+export interface GroupNodeData {
+  title?: string;
+  color?: string;
+  [key: string]: unknown;
+}
+
+export type CanvasNode = Node<NoteNodeData | EdgeJunctionNodeData | GroupNodeData>;
 
 interface CustomEdgeData {
   animated?: boolean;
@@ -21,4 +27,5 @@ interface CustomEdgeData {
 }
 
 export type CanvasEdge = Edge<CustomEdgeData>;
+
 

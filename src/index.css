@@ -121,6 +121,14 @@
 
 .react-flow__node {
   border-radius: 12px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform-style: flat;
+}
+
+.react-flow__viewport {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .react-flow__node.selected {
