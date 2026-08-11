@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect, useRef, memo } from 'react';
-import { NodeProps, useReactFlow } from '@xyflow/react';
+import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
 import { NoteNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
 import { WikilinkText } from '../WikilinkText';
@@ -57,14 +57,21 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
 
   return (
     <div
-      className={`relative w-[260px] min-h-[100px] rounded-xl border border-[var(--node-border)] bg-[var(--node-bg)] flex flex-col p-3.5 transition-shadow duration-150 ${
+      className={`relative w-full h-full min-w-[180px] min-h-[90px] rounded-xl border border-[var(--node-border)] bg-[var(--node-bg)] flex flex-col p-3.5 transition-shadow duration-150 ${
         selected
           ? 'ring-2 ring-[var(--node-selected-ring)]'
           : 'hover:ring-2 hover:ring-[var(--node-hover-ring)]'
       }`}
     >
-      {/* Handles */}
+      {/* Handles & Resizer */}
       <FourWayHandles isConnectable={isConnectable} />
+      <NodeResizer
+        minWidth={180}
+        minHeight={90}
+        isVisible={selected}
+        lineClassName="!border-blue-500 !border-dashed"
+        handleClassName="!w-3 !h-3 !bg-blue-500 !border-2 !border-white !rounded-full"
+      />
 
       {/* Title Field */}
       {isEditingTitle ? (
@@ -111,12 +118,12 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
             if (e.key === 'Escape') setIsEditingContent(false);
           }}
           placeholder="Type your notes here..."
-          className="nodrag nopan w-full bg-transparent text-xs font-medium text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none resize-none leading-relaxed font-sans cursor-text overflow-hidden antialiased subpixel-antialiased"
+          className="nodrag nopan w-full flex-1 bg-transparent text-xs font-medium text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none resize-none leading-relaxed font-sans cursor-text overflow-hidden antialiased subpixel-antialiased"
         />
       ) : (
         <div
           onClick={() => setIsEditingContent(true)}
-          className="nodrag nopan w-full bg-transparent text-xs font-medium text-[var(--text-normal)] leading-relaxed font-sans cursor-text min-h-[20px] break-words whitespace-pre-wrap antialiased subpixel-antialiased"
+          className="nodrag nopan w-full flex-1 bg-transparent text-xs font-medium text-[var(--text-normal)] leading-relaxed font-sans cursor-text min-h-[20px] break-words whitespace-pre-wrap antialiased subpixel-antialiased"
         >
           {contentText.trim() ? (
             <WikilinkText text={contentText} sourceNodeId={id} />
@@ -130,4 +137,5 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
 });
 
 NoteNode.displayName = 'NoteNode';
+
 

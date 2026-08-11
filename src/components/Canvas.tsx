@@ -49,8 +49,21 @@ const edgeTypes = {
 };
 
 const InnerCanvas: React.FC = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(loadSavedNodes());
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState<CanvasNode>(loadSavedNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>(loadSavedEdges());
+
+  const onNodesChange = useCallback(
+    (changes: any) => {
+      onNodesChangeBase(changes);
+      if (changes.some((c: any) => c.type === 'dimensions')) {
+        setNodes((currentNodes) => {
+          setEdges((eds) => syncAutoEdges(currentNodes, eds) as CanvasEdge[]);
+          return currentNodes;
+        });
+      }
+    },
+    [onNodesChangeBase, setNodes, setEdges]
+  );
   const [menu, setMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
@@ -119,7 +132,7 @@ const InnerCanvas: React.FC = () => {
           position: { x: groupX, y: groupY },
           style: { width: groupWidth, height: groupHeight },
           data: {
-            title: `Group ${currentNodes.filter((n) => n.type === 'groupNode').length + 1}`,
+            title: '',
             color: 'blue',
           },
           selected: true,
@@ -253,8 +266,10 @@ const InnerCanvas: React.FC = () => {
         if (!isGroupModeRef.current) {
           isGroupModeRef.current = true;
           setIsGroupMode(true);
-          toggledNodeIdsRef.current = new Set();
-          setToggledNodeIds(new Set());
+          const currentlySelected = getNodes().filter((n) => n.selected).map((n) => n.id);
+          const initialSet = new Set(currentlySelected);
+          toggledNodeIdsRef.current = initialSet;
+          setToggledNodeIds(initialSet);
         }
       }
     };
@@ -275,7 +290,7 @@ const InnerCanvas: React.FC = () => {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', exitGroupMode);
     };
-  }, [exitGroupMode, handleUngroupSelectedNodes]);
+  }, [exitGroupMode, handleUngroupSelectedNodes, getNodes]);
 
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
     (_event, _node, allNodes) => {
@@ -329,6 +344,7 @@ const InnerCanvas: React.FC = () => {
           id: `note-${Date.now()}`,
           type: 'noteNode',
           position: pos,
+          style: { width: 260 },
           data: { title: '', content: '', updatedAt: new Date().toISOString() },
         },
       ]);

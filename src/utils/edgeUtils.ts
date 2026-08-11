@@ -59,7 +59,7 @@ export function autoWrapConnectedNodeTitles(
     const sources = getNodesForId(edge.source);
     const targets = getNodesForId(edge.target);
 
-    [[sources, targets], [targets, sources]].forEach(([fromList, toList]) => {
+    [[sources, targets]].forEach(([fromList, toList]) => {
       fromList.forEach((src) => {
         const srcTitle = (src.data as any)?.title;
         if (typeof srcTitle === 'string' && srcTitle.trim().length >= 2) {
@@ -125,8 +125,19 @@ function getNodeSideMidpoints(
   nodeMap?: Map<string, Node>
 ): Record<string, HandlePosition> {
   const isJunction = node.type === 'edgeJunction';
-  const width = node.measured?.width || node.width || (isJunction ? 16 : NODE_DEFAULT_WIDTH);
-  const height = node.measured?.height || node.height || (isJunction ? 16 : NODE_DEFAULT_HEIGHT);
+  const styleWidth = typeof node.style?.width === 'number' ? node.style.width : parseFloat(String(node.style?.width || ''));
+  const styleHeight = typeof node.style?.height === 'number' ? node.style.height : parseFloat(String(node.style?.height || ''));
+
+  const width =
+    node.measured?.width ||
+    node.width ||
+    (!isNaN(styleWidth) && styleWidth > 0 ? styleWidth : 0) ||
+    (isJunction ? 16 : node.type === 'noteNode' ? 260 : NODE_DEFAULT_WIDTH);
+  const height =
+    node.measured?.height ||
+    node.height ||
+    (!isNaN(styleHeight) && styleHeight > 0 ? styleHeight : 0) ||
+    (isJunction ? 16 : node.type === 'noteNode' ? 100 : NODE_DEFAULT_HEIGHT);
   const { x, y } = getNodeAbsolutePos(node, nodeMap);
 
   return {

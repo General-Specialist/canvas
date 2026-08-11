@@ -23,6 +23,9 @@ export type CanvasNode = Node<NoteNodeData | EdgeJunctionNodeData | GroupNodeDat
 
 interface CustomEdgeData {
   animated?: boolean;
+  label?: string;
+  isWikiLink?: boolean;
+  isGroupAutoEdge?: boolean;
   [key: string]: unknown;
 }
 

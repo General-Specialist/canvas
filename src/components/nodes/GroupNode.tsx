@@ -43,7 +43,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
   const { setNodes, setEdges, getNodes } = useReactFlow();
   const groupData = data as unknown as GroupNodeData;
 
-  const titleText = groupData.title || 'Group';
+  const titleText = groupData.title || '';
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
@@ -192,7 +192,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
         </div>
       </div>
 
-      <div className="flex-1 pointer-events-none" />
+      <div className="flex-1" />
     </div>
   );
 });

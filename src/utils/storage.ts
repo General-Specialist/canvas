@@ -10,6 +10,7 @@ const initialDefaultNodes: CanvasNode[] = [
     id: 'note-welcome',
     type: 'noteNode',
     position: { x: 250, y: 150 },
+    style: { width: 260 },
     data: {
       title: 'Welcome to Canvas',
       content:
@@ -22,6 +23,7 @@ const initialDefaultNodes: CanvasNode[] = [
     id: 'note-feature-min-edge',
     type: 'noteNode',
     position: { x: 750, y: 100 },
+    style: { width: 260 },
     data: {
       title: 'Dynamic Minimum Length Edges',
       content:
@@ -34,6 +36,7 @@ const initialDefaultNodes: CanvasNode[] = [
     id: 'note-feature-edge-connect',
     type: 'noteNode',
     position: { x: 750, y: 450 },
+    style: { width: 260 },
     data: {
       title: 'Edge-to-Edge Connections',
       content:
@@ -69,7 +72,18 @@ function setStorage<T>(key: string, value: T): void {
   }
 }
 
-export const loadSavedNodes = (): CanvasNode[] => getStorage(STORAGE_KEY_NODES, initialDefaultNodes);
+export const loadSavedNodes = (): CanvasNode[] => {
+  const nodes = getStorage(STORAGE_KEY_NODES, initialDefaultNodes);
+  return nodes.map((node) => {
+    if (node.type === 'noteNode' && (!node.style || !node.style.width)) {
+      return {
+        ...node,
+        style: { ...node.style, width: 260 },
+      };
+    }
+    return node;
+  });
+};
 export const saveNodes = (nodes: CanvasNode[]): void => setStorage(STORAGE_KEY_NODES, nodes);
 export const loadSavedEdges = (): CanvasEdge[] =>
   getStorage<CanvasEdge[]>(STORAGE_KEY_EDGES, []).map((edge) => ({

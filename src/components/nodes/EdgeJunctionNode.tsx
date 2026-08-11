@@ -18,8 +18,8 @@ export const EdgeJunctionNode: React.FC<NodeProps> = memo(({ selected, isConnect
   >
     {POSITIONS.map(({ id, pos }) => (
       <React.Fragment key={id}>
-        <Handle type="source" position={pos} id={id} style={HANDLE_STYLE} isConnectable={isConnectable} />
         <Handle type="target" position={pos} id={id} style={HANDLE_STYLE} isConnectable={isConnectable} />
+        <Handle type="source" position={pos} id={id} style={HANDLE_STYLE} isConnectable={isConnectable} />
       </React.Fragment>
     ))}
   </div>

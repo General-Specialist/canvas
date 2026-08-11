@@ -169,3 +169,18 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
+
+/* KaTeX custom styles for canvas nodes */
+.katex {
+  font-size: 1.05em;
+  color: inherit;
+}
+
+.katex-display {
+  margin: 0.35em 0 !important;
+}
+
+.katex-display > .katex {
+  white-space: normal;
+}
+

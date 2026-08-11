@@ -12,8 +12,8 @@ export const FourWayHandles: React.FC<{ isConnectable?: boolean }> = memo(({ isC
   <>
     {POSITIONS.map(({ id, pos, style }) => (
       <React.Fragment key={id}>
-        <Handle type="source" position={pos} id={id} style={style} isConnectable={isConnectable} />
         <Handle type="target" position={pos} id={id} style={style} isConnectable={isConnectable} />
+        <Handle type="source" position={pos} id={id} style={style} isConnectable={isConnectable} />
       </React.Fragment>
     ))}
   </>

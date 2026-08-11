@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -6,7 +6,7 @@ import {
   getBezierPath,
   useReactFlow,
 } from '@xyflow/react';
-import { GitCommit, X } from '@phosphor-icons/react';
+import { X } from '@phosphor-icons/react';
 
 import { expandGroupEdges } from '../../utils/edgeUtils';
 import { CanvasEdge } from '../../types/canvas';
@@ -24,8 +24,26 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
   style = {},
   markerEnd,
   selected,
+  label,
+  data,
 }) => {
-  const { setEdges, setNodes, getNodes } = useReactFlow();
+  const { setEdges, getNodes } = useReactFlow();
+  const [isEditing, setIsEditing] = useState(false);
+
+  const currentLabel = (data?.label as string) || (typeof label === 'string' ? label : '') || '';
+  const [labelText, setLabelText] = useState(currentLabel);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setLabelText(currentLabel);
+  }, [currentLabel]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -36,17 +54,21 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
     targetPosition,
   });
 
-  const addJunctionOnEdge = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setNodes((nds) => [
-      ...nds,
-      {
-        id: `junction-${Date.now()}`,
-        type: 'edgeJunction',
-        position: { x: labelX - 8, y: labelY - 8 },
-        data: { parentEdgeId: id },
-      },
-    ]);
+  const saveLabel = () => {
+    setIsEditing(false);
+    const trimmed = labelText.trim();
+    setEdges((eds) =>
+      eds.map((e) => {
+        if (e.id === id) {
+          return {
+            ...e,
+            label: trimmed,
+            data: { ...e.data, label: trimmed },
+          };
+        }
+        return e;
+      })
+    );
   };
 
   const deleteEdge = (e: React.MouseEvent) => {
@@ -82,28 +104,63 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
       <EdgeLabelRenderer>
         <div
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
-          className="nodrag nopan absolute pointer-events-auto flex items-center space-x-1 group z-20"
+          className="nodrag nopan absolute pointer-events-auto flex items-center gap-1.5 z-20 select-none"
         >
-          <button
-            onClick={addJunctionOnEdge}
-            className="opacity-0 group-hover:opacity-100 bg-[var(--sidebar-bg)] border border-[var(--border-color)] text-[var(--text-normal)] hover:text-[var(--text-hover)] p-1 rounded-full hover:bg-[var(--sidebar-hover-bg)] transition-all cursor-pointer"
-            title="Add junction point"
-          >
-            <GitCommit className="w-3 h-3" />
-          </button>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={labelText}
+              onChange={(e) => setLabelText(e.target.value)}
+              onBlur={saveLabel}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') {
+                  e.preventDefault();
+                  saveLabel();
+                }
+              }}
+              placeholder="Edge label..."
+              className="bg-[var(--sidebar-bg)] border border-blue-500 text-[var(--text-normal)] text-xs px-2.5 py-1 rounded-lg shadow-lg focus:outline-none min-w-[80px] max-w-[200px] text-center font-medium"
+            />
+          ) : (
+            <>
+              {currentLabel.trim() ? (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-[var(--sidebar-bg)] border border-[var(--border-color)] text-xs font-semibold text-[var(--text-normal)] shadow-sm hover:border-[var(--wikilink-color)] hover:text-[var(--text-hover)] transition-all cursor-pointer"
+                  title="Click to edit edge label"
+                >
+                  {currentLabel}
+                </div>
+              ) : selected ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-[var(--sidebar-bg)] border border-[var(--border-color)] text-[11px] font-medium text-[var(--text-light)] hover:text-[var(--text-hover)] hover:bg-[var(--sidebar-hover-bg)] transition-all cursor-pointer shadow-sm"
+                  title="Add label to edge"
+                >
+                  + Label
+                </button>
+              ) : null}
 
-          {selected && (
-            <button
-              onClick={deleteEdge}
-              className="bg-[var(--sidebar-hover-bg)] border border-[var(--border-color)] text-[var(--text-hover)] p-1 rounded-full hover:bg-[var(--icon-hover-bg)] transition-all cursor-pointer"
-              title="Delete Edge"
-            >
-              <X className="w-3 h-3" />
-            </button>
+              {selected && (
+                <button
+                  onClick={deleteEdge}
+                  className="bg-[var(--sidebar-hover-bg)] border border-[var(--border-color)] text-[var(--text-hover)] p-1 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-all cursor-pointer shadow-sm"
+                  title="Delete Edge"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </>
           )}
         </div>
       </EdgeLabelRenderer>
     </>
   );
 };
-
