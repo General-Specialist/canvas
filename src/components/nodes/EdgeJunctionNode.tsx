@@ -16,7 +16,21 @@ export const EdgeJunctionNode: React.FC<NodeProps> = memo(({ selected, isConnect
         isConnectable={isConnectable}
       />
       <Handle
+        type="target"
+        position={Position.Top}
+        id="top"
+        style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', top: 0, left: 0 }}
+        isConnectable={isConnectable}
+      />
+      <Handle
         type="source"
+        position={Position.Right}
+        id="right"
+        style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', top: 0, left: 0 }}
+        isConnectable={isConnectable}
+      />
+      <Handle
+        type="target"
         position={Position.Right}
         id="right"
         style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', top: 0, left: 0 }}
@@ -30,7 +44,21 @@ export const EdgeJunctionNode: React.FC<NodeProps> = memo(({ selected, isConnect
         isConnectable={isConnectable}
       />
       <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom"
+        style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', top: 0, left: 0 }}
+        isConnectable={isConnectable}
+      />
+      <Handle
         type="source"
+        position={Position.Left}
+        id="left"
+        style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', top: 0, left: 0 }}
+        isConnectable={isConnectable}
+      />
+      <Handle
+        type="target"
         position={Position.Left}
         id="left"
         style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', top: 0, left: 0 }}

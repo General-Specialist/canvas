@@ -11,26 +11,14 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
   const { setNodes, setEdges } = useReactFlow();
   const nodeData = data as unknown as NoteNodeData;
 
-  const [localTitle, setLocalTitle] = useState(nodeData.title || '');
-  const [localContent, setLocalContent] = useState(nodeData.content || '');
+  const titleText = nodeData.title || '';
+  const contentText = nodeData.content || '';
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if ((nodeData.title || '') !== localTitle) {
-      setLocalTitle(nodeData.title || '');
-    }
-  }, [nodeData.title]);
-
-  useEffect(() => {
-    if ((nodeData.content || '') !== localContent) {
-      setLocalContent(nodeData.content || '');
-    }
-  }, [nodeData.content]);
 
   // Focus textarea when entering edit mode
   useEffect(() => {
@@ -51,7 +39,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       titleRef.current.style.height = 'auto';
       titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
     }
-  }, [localTitle, isEditingTitle]);
+  }, [titleText, isEditingTitle]);
 
   // Dynamically adjust content textarea height to fit text content
   useLayoutEffect(() => {
@@ -59,7 +47,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       contentRef.current.style.height = 'auto';
       contentRef.current.style.height = `${contentRef.current.scrollHeight}px`;
     }
-  }, [localContent, isEditingContent]);
+  }, [contentText, isEditingContent]);
 
   const updateNodeData = (updates: Partial<NoteNodeData>) => {
     setNodes((nds) => {
@@ -83,15 +71,11 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
   };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setLocalTitle(val);
-    updateNodeData({ title: val });
+    updateNodeData({ title: e.target.value });
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setLocalContent(val);
-    updateNodeData({ content: val });
+    updateNodeData({ content: e.target.value });
   };
 
   const [isHovered, setIsHovered] = useState(false);
@@ -116,7 +100,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
         <textarea
           ref={titleRef}
           rows={1}
-          value={localTitle}
+          value={titleText}
           onChange={handleTitleChange}
           onBlur={() => setIsEditingTitle(false)}
           onKeyDown={(e) => {
@@ -136,8 +120,8 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
           onClick={() => setIsEditingTitle(true)}
           className="nodrag nopan w-full bg-transparent text-2xl font-bold text-[var(--text-normal)] mb-1.5 font-sans leading-tight cursor-text min-h-[32px] break-words whitespace-pre-wrap"
         >
-          {localTitle.trim() ? (
-            <WikilinkText text={localTitle} sourceNodeId={id} />
+          {titleText.trim() ? (
+            <WikilinkText text={titleText} sourceNodeId={id} />
           ) : (
             <span className="text-[var(--text-light)] select-none">Node name</span>
           )}
@@ -149,7 +133,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
         <textarea
           ref={contentRef}
           rows={1}
-          value={localContent}
+          value={contentText}
           onChange={handleContentChange}
           onBlur={() => setIsEditingContent(false)}
           onKeyDown={(e) => {
@@ -165,8 +149,8 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
           onClick={() => setIsEditingContent(true)}
           className="nodrag nopan w-full bg-transparent text-xs font-medium text-[var(--text-normal)] leading-relaxed font-sans cursor-text min-h-[20px] break-words whitespace-pre-wrap antialiased subpixel-antialiased"
         >
-          {localContent.trim() ? (
-            <WikilinkText text={localContent} sourceNodeId={id} />
+          {contentText.trim() ? (
+            <WikilinkText text={contentText} sourceNodeId={id} />
           ) : (
             <span className="text-[var(--text-light)] select-none">Type your notes here...</span>
           )}

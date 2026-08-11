@@ -342,24 +342,13 @@ const InnerCanvas: React.FC = () => {
     [nodes, setNodes, setEdges]
   );
 
-  // Auto-sync wiki link edges, title auto-wrapping, and group auto edges
+  // Auto-wrap titles on connected nodes when edges change
   useEffect(() => {
     setNodes((currentNodes) => {
       const { updatedNodes, modified } = autoWrapConnectedNodeTitles(currentNodes, edges);
-      if (modified) {
-        return updatedNodes;
-      }
-      return currentNodes;
+      return modified ? updatedNodes : currentNodes;
     });
-
-    setEdges((prevEdges) => {
-      const synced = syncAutoEdges(nodes, prevEdges) as CanvasEdge[];
-      if (JSON.stringify(synced) !== JSON.stringify(prevEdges)) {
-        return synced;
-      }
-      return prevEdges;
-    });
-  }, [nodes, edges, setNodes, setEdges]);
+  }, [edges, setNodes]);
 
   // Add New Note Node
   const handleAddNote = useCallback(

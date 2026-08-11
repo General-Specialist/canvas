@@ -38,7 +38,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
   const { setNodes, setEdges, getNodes } = useReactFlow();
   const groupData = data as unknown as GroupNodeData;
 
-  const [title, setTitle] = useState(groupData.title || 'Group');
+  const titleText = groupData.title || 'Group';
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const currentColor = groupData.color && COLOR_THEMES[groupData.color] ? groupData.color : 'blue';
@@ -57,7 +57,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
       titleRef.current.style.height = 'auto';
       titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
     }
-  }, [title, isEditingTitle]);
+  }, [titleText, isEditingTitle]);
 
   const updateGroupData = useCallback(
     (updates: Partial<GroupNodeData>) => {
@@ -83,9 +83,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
   );
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setTitle(val);
-    updateGroupData({ title: val });
+    updateGroupData({ title: e.target.value });
   };
 
   const handleUngroup = useCallback(
@@ -144,7 +142,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
             <textarea
               ref={titleRef}
               rows={1}
-              value={title}
+              value={titleText}
               onChange={handleTitleChange}
               onBlur={() => setIsEditingTitle(false)}
               onKeyDown={(e) => {
@@ -163,8 +161,8 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
               onClick={() => setIsEditingTitle(true)}
               className={`nodrag nopan bg-transparent text-5xl font-bold tracking-tight leading-tight w-full cursor-text min-h-[50px] break-words whitespace-pre-wrap ${themeStyles.text}`}
             >
-              {title.trim() ? (
-                <WikilinkText text={title} sourceNodeId={id} />
+              {titleText.trim() ? (
+                <WikilinkText text={titleText} sourceNodeId={id} />
               ) : (
                 <span className="opacity-50 select-none">Group Title</span>
               )}
