@@ -11,8 +11,9 @@ import {
   MusicNotes,
   DownloadSimple,
 } from '@phosphor-icons/react';
-import { NoteNodeData } from '../../types/canvas';
+import { NoteNodeData, PDFAnnotation } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
+import { PDFViewer } from '../pdf/PDFViewer';
 
 export const FileNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
   const { setNodes } = useReactFlow();
@@ -70,21 +71,41 @@ export const FileNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
   const FileIconComponent = getFileIcon();
   const [isHovered, setIsHovered] = useState(false);
 
+  const minW = isPdf ? 520 : 280;
+  const minH = isPdf ? 600 : 160;
+
+  const handleResizeNode = (w: number, h: number) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id
+          ? {
+              ...n,
+              style: { ...n.style, width: w, height: h },
+            }
+          : n
+      )
+    );
+  };
+
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative w-full h-full min-w-[280px] min-h-[160px] rounded-xl border border-[var(--node-border)] bg-[var(--node-bg)] shadow-xl flex flex-col p-3 transition-shadow duration-150 ${
+      className={`relative w-full h-full rounded-xl border border-[var(--node-border)] bg-[var(--node-bg)] shadow-xl flex flex-col p-3 transition-shadow duration-150 ${
         selected
           ? 'ring-2 ring-[var(--node-selected-ring)]'
           : isHovered
           ? 'ring-2 ring-[var(--node-hover-ring)]'
           : ''
       }`}
+      style={{
+        minWidth: minW,
+        minHeight: minH,
+      }}
     >
       <NodeResizer
-        minWidth={280}
-        minHeight={160}
+        minWidth={minW}
+        minHeight={minH}
         isVisible={selected}
         color="var(--node-selected-ring)"
       />
@@ -133,7 +154,7 @@ export const FileNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
               download={fileName}
               target="_blank"
               rel="noreferrer"
-              title="Download / View File"
+              title="Download File"
               className="nodrag p-1 rounded text-[var(--text-light)] hover:text-[var(--text-hover)] hover:bg-[var(--sidebar-hover-bg)] transition-colors"
             >
               <DownloadSimple className="w-3.5 h-3.5" />
@@ -145,13 +166,13 @@ export const FileNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       {/* Embedded File Viewer / Editor Area */}
       <div className="pt-2 flex-1 flex flex-col min-h-0">
         {isPdf && fileUrl ? (
-          <div className="w-full flex-1 min-h-0 bg-[var(--input-bg)] rounded-lg border border-[var(--border-color)] overflow-hidden">
-            <iframe
-              src={fileUrl}
-              className="w-full h-full border-none"
-              title={nodeData.title || 'PDF View'}
-            />
-          </div>
+          <PDFViewer
+            fileUrl={fileUrl}
+            fileName={fileName}
+            annotations={nodeData.annotations || []}
+            onUpdateAnnotations={(anns: PDFAnnotation[]) => updateNodeData({ annotations: anns })}
+            onResizeNode={handleResizeNode}
+          />
         ) : isImage && fileUrl ? (
           <div className="w-full flex-1 min-h-0 bg-[var(--input-bg)] rounded-lg border border-[var(--border-color)] p-1.5 flex items-center justify-center overflow-hidden">
             <img

@@ -13,7 +13,7 @@ import {
   addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Sun, Moon } from '@phosphor-icons/react';
+import { Sun, Moon, Trash, Copy } from '@phosphor-icons/react';
 
 import { NoteNode } from './nodes/NoteNode';
 import { FileNode } from './nodes/FileNode';
@@ -46,6 +46,7 @@ const InnerCanvas: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(loadSavedNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>(loadSavedEdges());
   const [menu, setMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
+  const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
   const { theme, toggleTheme } = useTheme();
   const { screenToFlowPosition, setViewport } = useReactFlow();
@@ -224,10 +225,57 @@ const InnerCanvas: React.FC = () => {
     [createFileNode, screenToFlowPosition]
   );
 
+  // Right-click node handler
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: CanvasNode) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setMenu(null);
+      setNodeMenu({
+        x: event.clientX,
+        y: event.clientY,
+        nodeId: node.id,
+      });
+    },
+    []
+  );
+
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+      setNodeMenu(null);
+    },
+    [setNodes, setEdges]
+  );
+
+  const handleDuplicateNode = useCallback(
+    (nodeId: string) => {
+      const nodeToCopy = nodes.find((n) => n.id === nodeId);
+      if (!nodeToCopy) return;
+
+      const newId = `${nodeToCopy.type || 'node'}-${Date.now()}`;
+      const newNode: CanvasNode = {
+        ...JSON.parse(JSON.stringify(nodeToCopy)),
+        id: newId,
+        position: {
+          x: nodeToCopy.position.x + 30,
+          y: nodeToCopy.position.y + 30,
+        },
+        selected: true,
+      };
+
+      setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), newNode]);
+      setNodeMenu(null);
+    },
+    [nodes, setNodes]
+  );
+
   // Right-click pane to open context menu
   const handlePaneContextMenu = useCallback(
     (e: React.MouseEvent | MouseEvent) => {
       e.preventDefault();
+      setNodeMenu(null);
       const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       setMenu({ x: e.clientX, y: e.clientY, flowPosition });
     },
@@ -246,6 +294,7 @@ const InnerCanvas: React.FC = () => {
   // Close context menu on click
   const handlePaneClick = useCallback(() => {
     setMenu(null);
+    setNodeMenu(null);
   }, []);
 
   // Save Viewport state on move end
@@ -282,7 +331,7 @@ const InnerCanvas: React.FC = () => {
         <span className="capitalize">{theme === 'dark' ? 'Light' : 'Dark'}</span>
       </button>
 
-      {/* Right Click Context Menu */}
+      {/* Right Click Pane Context Menu */}
       {menu && (
         <div
           className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-40 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
@@ -312,6 +361,35 @@ const InnerCanvas: React.FC = () => {
         </div>
       )}
 
+      {/* Right Click Node Context Menu */}
+      {nodeMenu && (
+        <div
+          className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-44 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
+          style={{ top: nodeMenu.y, left: nodeMenu.x }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDuplicateNode(nodeMenu.nodeId);
+            }}
+            className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer"
+          >
+            <Copy className="w-3.5 h-3.5 text-[var(--text-light)]" />
+            <span>Duplicate Node</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteNode(nodeMenu.nodeId);
+            }}
+            className="w-full text-left px-3 py-1.5 hover:bg-red-500/10 text-red-500 hover:text-red-600 font-semibold transition-colors flex items-center gap-2 cursor-pointer"
+          >
+            <Trash className="w-3.5 h-3.5" />
+            <span>Delete Node</span>
+          </button>
+        </div>
+      )}
+
       {/* Main Infinite Canvas */}
       <ReactFlow
         nodes={nodes}
@@ -320,6 +398,7 @@ const InnerCanvas: React.FC = () => {
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onNodeDrag={handleNodeDrag}
+        onNodeContextMenu={handleNodeContextMenu}
         onMoveEnd={handleMoveEnd}
         onPaneClick={handlePaneClick}
         onPaneContextMenu={handlePaneContextMenu}
