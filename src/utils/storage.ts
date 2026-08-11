@@ -5,7 +5,7 @@ const STORAGE_KEY_NODES = 'infinite_canvas_nodes_v1';
 const STORAGE_KEY_EDGES = 'infinite_canvas_edges_v1';
 const STORAGE_KEY_VIEWPORT = 'infinite_canvas_viewport_v1';
 
-export const initialDefaultNodes: CanvasNode[] = [
+const initialDefaultNodes: CanvasNode[] = [
   {
     id: 'note-welcome',
     type: 'noteNode',
@@ -44,7 +44,7 @@ export const initialDefaultNodes: CanvasNode[] = [
   },
 ];
 
-export const initialDefaultEdges: CanvasEdge[] = [
+const initialDefaultEdges: CanvasEdge[] = [
   {
     id: 'e-welcome-min-edge',
     source: 'note-welcome',
@@ -69,7 +69,7 @@ export const initialDefaultEdges: CanvasEdge[] = [
   },
 ];
 
-export const initialDefaultViewport: Viewport = {
+const initialDefaultViewport: Viewport = {
   x: 50,
   y: 50,
   zoom: 0.9,
@@ -105,8 +105,3 @@ export const saveEdges = (edges: CanvasEdge[]): void => setStorage(STORAGE_KEY_E
 export const loadSavedViewport = (): Viewport => getStorage(STORAGE_KEY_VIEWPORT, initialDefaultViewport);
 export const saveViewport = (viewport: Viewport): void => setStorage(STORAGE_KEY_VIEWPORT, viewport);
 
-export function clearCanvasStorage(): void {
-  localStorage.removeItem(STORAGE_KEY_NODES);
-  localStorage.removeItem(STORAGE_KEY_EDGES);
-  localStorage.removeItem(STORAGE_KEY_VIEWPORT);
-}

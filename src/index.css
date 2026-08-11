@@ -5,7 +5,6 @@
   /* Provided raw Light Theme Variables */
   --color-white: #FFFFFF;
   --color-sidebar-white: #F9F8F7;
-  --color-icon-white: #FAFAFA;
   --color-icon-hover-white: #F3F3F3;
   --color-border-white: #EEEEEC;
   --color-sidebar-hover-white: #E9E9E8;
@@ -35,15 +34,12 @@
 
   --node-bg: var(--color-dark-sidebar);
   --node-border: var(--color-dark-border);
-  --node-hover: var(--color-dark-sidebar-hover);
   --node-hover-ring: var(--color-dark-text-light);
   --node-selected-ring: var(--color-dark-text-hover);
   --handle-bg: var(--color-dark-text-normal);
   --handle-border: var(--color-dark-bg);
   --edge-stroke: var(--color-dark-text-normal);
   --edge-stroke-selected: var(--color-dark-text-hover);
-  --dots-color: var(--color-dark-border);
-  --input-bg: var(--color-dark-bg);
 }
 
 [data-theme="light"] {
@@ -59,15 +55,12 @@
 
   --node-bg: var(--color-sidebar-white);
   --node-border: var(--color-border-white);
-  --node-hover: var(--color-sidebar-hover-white);
   --node-hover-ring: var(--color-text-light-black);
   --node-selected-ring: var(--color-text-hover-black);
   --handle-bg: var(--color-text-normal-black);
   --handle-border: var(--color-white);
   --edge-stroke: var(--color-text-normal-black);
   --edge-stroke-selected: var(--color-text-hover-black);
-  --dots-color: var(--color-border-white);
-  --input-bg: var(--color-icon-white);
 }
 
 @layer base {
@@ -137,25 +130,6 @@
 
 .react-flow__attribution {
   display: none !important;
-}
-
-
-
-/* Glassmorphism & Panel utilities */
-.glass-panel {
-  background-color: var(--sidebar-bg);
-  border: 1px solid var(--border-color);
-  color: var(--text-normal);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.glass-card {
-  background-color: var(--node-bg);
-  border: 1px solid var(--node-border);
-  color: var(--text-normal);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Hide scrollbars globally */

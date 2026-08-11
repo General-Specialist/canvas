@@ -1,16 +1,16 @@
 import { Node, Edge, Position } from '@xyflow/react';
 
-export interface HandlePosition {
+interface HandlePosition {
   x: number;
   y: number;
   position: Position;
   id: string;
 }
 
-export const NODE_DEFAULT_WIDTH = 300;
-export const NODE_DEFAULT_HEIGHT = 200;
+const NODE_DEFAULT_WIDTH = 300;
+const NODE_DEFAULT_HEIGHT = 200;
 
-export function getNodeSideMidpoints(node: Node): Record<string, HandlePosition> {
+function getNodeSideMidpoints(node: Node): Record<string, HandlePosition> {
   const defaultW = node.type === 'edgeJunction' ? 16 : NODE_DEFAULT_WIDTH;
   const defaultH = node.type === 'edgeJunction' ? 16 : NODE_DEFAULT_HEIGHT;
   const width = node.measured?.width || node.width || defaultW;
@@ -46,7 +46,7 @@ export function getNodeSideMidpoints(node: Node): Record<string, HandlePosition>
   };
 }
 
-export function getOptimalHandles(
+function getOptimalHandles(
   sourceNode: Node,
   targetNode: Node
 ): { sourceHandle: string; targetHandle: string } {
