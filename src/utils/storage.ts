@@ -44,36 +44,7 @@ const initialDefaultNodes: CanvasNode[] = [
   },
 ];
 
-const initialDefaultEdges: CanvasEdge[] = [
-  {
-    id: 'e-welcome-min-edge',
-    source: 'note-welcome',
-    target: 'note-feature-min-edge',
-    sourceHandle: 'right',
-    targetHandle: 'left',
-    type: 'customEdge',
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-    },
-    data: {
-      animated: true,
-    },
-  },
-  {
-    id: 'e-welcome-edge-connect',
-    source: 'note-welcome',
-    target: 'note-feature-edge-connect',
-    sourceHandle: 'bottom',
-    targetHandle: 'left',
-    type: 'customEdge',
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-    },
-    data: {
-      animated: false,
-    },
-  },
-];
+const initialDefaultEdges: CanvasEdge[] = [];
 
 const initialDefaultViewport: Viewport = {
   x: 50,
@@ -86,7 +57,7 @@ function getStorage<T>(key: string, defaultValue: T): T {
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(defaultValue) ? Array.isArray(parsed) && parsed.length > 0 : parsed && typeof parsed === 'object') {
+      if (Array.isArray(defaultValue) ? Array.isArray(parsed) : parsed && typeof parsed === 'object') {
         return parsed;
       }
     }

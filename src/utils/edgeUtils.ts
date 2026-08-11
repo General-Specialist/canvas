@@ -249,7 +249,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     }
   });
 
-  // 2. Collect base edges (unpacking any stored consolidatedChildEdges from active group auto-edges)
+  // 2. Collect base edges
   const baseEdges: Edge[] = [];
   const baseEdgeKeySet = new Set<string>();
 
@@ -262,14 +262,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
   };
 
   edges.forEach((edge) => {
-    if (edge.data?.isGroupAutoEdge) {
-      const savedChildren = edge.data?.consolidatedChildEdges as Edge[] | undefined;
-      if (Array.isArray(savedChildren) && savedChildren.length > 0) {
-        savedChildren.forEach(addBaseEdge);
-      }
-    } else {
-      addBaseEdge(edge);
-    }
+    addBaseEdge(edge);
   });
 
   // 3. Scan for Wiki-Links
@@ -423,7 +416,6 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
       markerEnd: { type: MarkerType.ArrowClosed },
       data: {
         isGroupAutoEdge: true,
-        consolidatedChildEdges: info.childEdges,
       },
     });
   });

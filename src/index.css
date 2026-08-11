@@ -92,18 +92,20 @@
   border: 2px solid var(--handle-border) !important;
   border-radius: 9999px !important;
   z-index: 10 !important;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease !important;
+}
+
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node:focus-within .react-flow__handle,
+.react-flow__handle-connecting,
+.react-flow__handle-valid {
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .react-flow__handle:hover {
-  background-color: var(--text-hover) !important;
-}
-
-.react-flow__handle-connecting {
-  background-color: var(--text-hover) !important;
-}
-
-.react-flow__handle-valid {
   background-color: var(--text-hover) !important;
 }
 

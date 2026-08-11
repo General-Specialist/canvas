@@ -154,10 +154,12 @@ const InnerCanvas: React.FC = () => {
           return n;
         });
 
-        return [newGroupNode, ...updatedNodes];
+        const finalNodes = [newGroupNode, ...updatedNodes];
+        setEdges((eds) => syncAutoEdges(finalNodes, eds) as CanvasEdge[]);
+        return finalNodes;
       });
     },
-    [setNodes]
+    [setNodes, setEdges]
   );
 
   const handleGroupSelectedNodes = useCallback(() => {
