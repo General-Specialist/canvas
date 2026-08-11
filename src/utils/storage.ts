@@ -13,7 +13,7 @@ const initialDefaultNodes: CanvasNode[] = [
     data: {
       title: 'Welcome to Canvas',
       content:
-        'This is a modern canvas powered by React Flow.\n\nKey features:\n- Drag nodes around to see edges automatically optimize attachment points\n- Click any title or content to edit inline\n- Toggle between Light and Dark themes anytime using the top bar toggle',
+        'This is a modern canvas powered by React Flow.\n\nKey features:\n- Drag nodes to test [[Dynamic Minimum Length Edges]]\n- Connect edges or junctions with [[Edge-to-Edge Connections]]\n- Type [[Note Title]] to auto-link notes in purple like Obsidian!',
       pinned: false,
       updatedAt: new Date().toISOString(),
     },

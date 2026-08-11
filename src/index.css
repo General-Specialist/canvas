@@ -40,6 +40,8 @@
   --handle-border: var(--color-dark-bg);
   --edge-stroke: var(--color-dark-text-normal);
   --edge-stroke-selected: var(--color-dark-text-hover);
+  --wikilink-color: #a882ff;
+  --wikilink-hover: #c084fc;
 }
 
 [data-theme="light"] {
@@ -61,6 +63,8 @@
   --handle-border: var(--color-white);
   --edge-stroke: var(--color-text-normal-black);
   --edge-stroke-selected: var(--color-text-hover-black);
+  --wikilink-color: #705dcf;
+  --wikilink-hover: #6b21a8;
 }
 
 @layer base {

@@ -1,9 +1,10 @@
-import React, { useState, memo, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useState, memo, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
 import { Trash, Palette } from '@phosphor-icons/react';
 import { GroupNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
 import { expandGroupEdges, syncAutoEdges } from '../../utils/edgeUtils';
+import { WikilinkText } from '../WikilinkText';
 
 const COLOR_THEMES: Record<string, { bg: string; border: string; text: string }> = {
   blue: {
@@ -38,18 +39,25 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
   const groupData = data as unknown as GroupNodeData;
 
   const [title, setTitle] = useState(groupData.title || 'Group');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const currentColor = groupData.color && COLOR_THEMES[groupData.color] ? groupData.color : 'blue';
   const themeStyles = COLOR_THEMES[currentColor];
 
   const [showColorPicker, setShowColorPicker] = useState(false);
 
+  useEffect(() => {
+    if (isEditingTitle && titleRef.current) {
+      titleRef.current.focus();
+    }
+  }, [isEditingTitle]);
+
   useLayoutEffect(() => {
-    if (titleRef.current) {
+    if (isEditingTitle && titleRef.current) {
       titleRef.current.style.height = 'auto';
       titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
     }
-  }, [title]);
+  }, [title, isEditingTitle]);
 
   const updateGroupData = useCallback(
     (updates: Partial<GroupNodeData>) => {
@@ -132,14 +140,36 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
       {/* Group Header Bar (Seamless transparent background with multi-line textarea title) */}
       <div className="flex items-start justify-between px-4 py-3 select-none">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <textarea
-            ref={titleRef}
-            rows={1}
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="Group Title"
-            className={`nodrag nopan bg-transparent text-5xl font-bold tracking-tight leading-tight focus:outline-none w-full resize-none overflow-hidden ${themeStyles.text}`}
-          />
+          {isEditingTitle ? (
+            <textarea
+              ref={titleRef}
+              rows={1}
+              value={title}
+              onChange={handleTitleChange}
+              onBlur={() => setIsEditingTitle(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  setIsEditingTitle(false);
+                } else if (e.key === 'Escape') {
+                  setIsEditingTitle(false);
+                }
+              }}
+              placeholder="Group Title"
+              className={`nodrag nopan bg-transparent text-5xl font-bold tracking-tight leading-tight focus:outline-none w-full resize-none overflow-hidden ${themeStyles.text}`}
+            />
+          ) : (
+            <div
+              onClick={() => setIsEditingTitle(true)}
+              className={`nodrag nopan bg-transparent text-5xl font-bold tracking-tight leading-tight w-full cursor-text min-h-[50px] break-words whitespace-pre-wrap ${themeStyles.text}`}
+            >
+              {title.trim() ? (
+                <WikilinkText text={title} sourceNodeId={id} />
+              ) : (
+                <span className="opacity-50 select-none">Group Title</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action Controls */}

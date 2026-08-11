@@ -2,6 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, memo } from 'react
 import { NodeProps, useReactFlow } from '@xyflow/react';
 import { NoteNodeData } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
+import { WikilinkText } from '../WikilinkText';
 
 import { syncAutoEdges } from '../../utils/edgeUtils';
 import { CanvasEdge } from '../../types/canvas';
@@ -12,6 +13,9 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
 
   const [localTitle, setLocalTitle] = useState(nodeData.title || '');
   const [localContent, setLocalContent] = useState(nodeData.content || '');
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -28,21 +32,34 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
     }
   }, [nodeData.content]);
 
+  // Focus textarea when entering edit mode
+  useEffect(() => {
+    if (isEditingTitle && titleRef.current) {
+      titleRef.current.focus();
+    }
+  }, [isEditingTitle]);
+
+  useEffect(() => {
+    if (isEditingContent && contentRef.current) {
+      contentRef.current.focus();
+    }
+  }, [isEditingContent]);
+
   // Dynamically adjust title textarea height to fit text content
   useLayoutEffect(() => {
-    if (titleRef.current) {
+    if (isEditingTitle && titleRef.current) {
       titleRef.current.style.height = 'auto';
       titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
     }
-  }, [localTitle]);
+  }, [localTitle, isEditingTitle]);
 
   // Dynamically adjust content textarea height to fit text content
   useLayoutEffect(() => {
-    if (contentRef.current) {
+    if (isEditingContent && contentRef.current) {
       contentRef.current.style.height = 'auto';
       contentRef.current.style.height = `${contentRef.current.scrollHeight}px`;
     }
-  }, [localContent]);
+  }, [localContent, isEditingContent]);
 
   const updateNodeData = (updates: Partial<NoteNodeData>) => {
     setNodes((nds) => {
@@ -94,31 +111,67 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       {/* Handles */}
       <FourWayHandles isConnectable={isConnectable} />
 
-      {/* Auto-growing Title (2x bigger than content text: 24px vs 12px) */}
-      <textarea
-        ref={titleRef}
-        rows={1}
-        value={localTitle}
-        onChange={handleTitleChange}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            contentRef.current?.focus();
-          }
-        }}
-        placeholder="Node name"
-        className="nodrag nopan w-full bg-transparent text-2xl font-bold text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none mb-1.5 font-sans leading-tight resize-none overflow-hidden"
-      />
+      {/* Title Field (Renders [[wikilinks]] as purple text when not editing) */}
+      {isEditingTitle ? (
+        <textarea
+          ref={titleRef}
+          rows={1}
+          value={localTitle}
+          onChange={handleTitleChange}
+          onBlur={() => setIsEditingTitle(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              setIsEditingTitle(false);
+              setIsEditingContent(true);
+            } else if (e.key === 'Escape') {
+              setIsEditingTitle(false);
+            }
+          }}
+          placeholder="Node name"
+          className="nodrag nopan w-full bg-transparent text-2xl font-bold text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none mb-1.5 font-sans leading-tight resize-none overflow-hidden"
+        />
+      ) : (
+        <div
+          onClick={() => setIsEditingTitle(true)}
+          className="nodrag nopan w-full bg-transparent text-2xl font-bold text-[var(--text-normal)] mb-1.5 font-sans leading-tight cursor-text min-h-[32px] break-words whitespace-pre-wrap"
+        >
+          {localTitle.trim() ? (
+            <WikilinkText text={localTitle} sourceNodeId={id} />
+          ) : (
+            <span className="text-[var(--text-light)] select-none">Node name</span>
+          )}
+        </div>
+      )}
 
-      {/* Auto-growing Content */}
-      <textarea
-        ref={contentRef}
-        rows={1}
-        value={localContent}
-        onChange={handleContentChange}
-        placeholder="Type your notes here..."
-        className="nodrag nopan w-full bg-transparent text-xs font-medium text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none resize-none leading-relaxed font-sans cursor-text overflow-hidden antialiased subpixel-antialiased"
-      />
+      {/* Content Field (Renders [[wikilinks]] as purple text when not editing) */}
+      {isEditingContent ? (
+        <textarea
+          ref={contentRef}
+          rows={1}
+          value={localContent}
+          onChange={handleContentChange}
+          onBlur={() => setIsEditingContent(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setIsEditingContent(false);
+            }
+          }}
+          placeholder="Type your notes here..."
+          className="nodrag nopan w-full bg-transparent text-xs font-medium text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none resize-none leading-relaxed font-sans cursor-text overflow-hidden antialiased subpixel-antialiased"
+        />
+      ) : (
+        <div
+          onClick={() => setIsEditingContent(true)}
+          className="nodrag nopan w-full bg-transparent text-xs font-medium text-[var(--text-normal)] leading-relaxed font-sans cursor-text min-h-[20px] break-words whitespace-pre-wrap antialiased subpixel-antialiased"
+        >
+          {localContent.trim() ? (
+            <WikilinkText text={localContent} sourceNodeId={id} />
+          ) : (
+            <span className="text-[var(--text-light)] select-none">Type your notes here...</span>
+          )}
+        </div>
+      )}
     </div>
   );
 });
