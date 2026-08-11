@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { Handle, Position, NodeProps, NodeResizer, useReactFlow } from '@xyflow/react';
+import { NodeProps, NodeResizer, useReactFlow } from '@xyflow/react';
 import { NoteNodeData } from '../../types/canvas';
+import { FourWayHandles } from './FourWayHandles';
 
 export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
   const { setNodes } = useReactFlow();
@@ -89,34 +90,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       />
 
       {/* Handles */}
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="top"
-        style={{ top: 0, left: '50%', transform: 'translate(-50%, -50%)' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        style={{ top: '50%', right: 0, transform: 'translate(50%, -50%)' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom"
-        style={{ bottom: 0, left: '50%', transform: 'translate(-50%, 50%)' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left"
-        style={{ top: '50%', left: 0, transform: 'translate(-50%, -50%)' }}
-        isConnectable={isConnectable}
-      />
+      <FourWayHandles isConnectable={isConnectable} />
 
       {/* Single Continuous Note Editor */}
       <textarea

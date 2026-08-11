@@ -103,74 +103,35 @@ export const initialDefaultViewport: Viewport = {
   zoom: 0.9,
 };
 
-export function loadSavedNodes(): CanvasNode[] {
+function getStorage<T>(key: string, defaultValue: T): T {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_NODES);
+    const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(defaultValue) ? Array.isArray(parsed) && parsed.length > 0 : parsed && typeof parsed === 'object') {
         return parsed;
       }
     }
   } catch (err) {
-    console.error('Failed to load saved nodes from localStorage:', err);
+    console.error(`Failed to load ${key} from localStorage:`, err);
   }
-  return initialDefaultNodes;
+  return defaultValue;
 }
 
-export function saveNodes(nodes: CanvasNode[]): void {
+function setStorage<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(STORAGE_KEY_NODES, JSON.stringify(nodes));
+    localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
-    console.error('Failed to save nodes to localStorage:', err);
-  }
-}
-
-export function loadSavedEdges(): CanvasEdge[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_EDGES);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load saved edges from localStorage:', err);
-  }
-  return initialDefaultEdges;
-}
-
-export function saveEdges(edges: CanvasEdge[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_EDGES, JSON.stringify(edges));
-  } catch (err) {
-    console.error('Failed to save edges to localStorage:', err);
+    console.error(`Failed to save ${key} to localStorage:`, err);
   }
 }
 
-export function loadSavedViewport(): Viewport {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_VIEWPORT);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.x === 'number') {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load viewport from localStorage:', err);
-  }
-  return initialDefaultViewport;
-}
-
-export function saveViewport(viewport: Viewport): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_VIEWPORT, JSON.stringify(viewport));
-  } catch (err) {
-    console.error('Failed to save viewport to localStorage:', err);
-  }
-}
+export const loadSavedNodes = (): CanvasNode[] => getStorage(STORAGE_KEY_NODES, initialDefaultNodes);
+export const saveNodes = (nodes: CanvasNode[]): void => setStorage(STORAGE_KEY_NODES, nodes);
+export const loadSavedEdges = (): CanvasEdge[] => getStorage(STORAGE_KEY_EDGES, initialDefaultEdges);
+export const saveEdges = (edges: CanvasEdge[]): void => setStorage(STORAGE_KEY_EDGES, edges);
+export const loadSavedViewport = (): Viewport => getStorage(STORAGE_KEY_VIEWPORT, initialDefaultViewport);
+export const saveViewport = (viewport: Viewport): void => setStorage(STORAGE_KEY_VIEWPORT, viewport);
 
 export function clearCanvasStorage(): void {
   localStorage.removeItem(STORAGE_KEY_NODES);

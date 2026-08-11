@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Handle, Position, NodeProps, NodeResizer, useReactFlow } from '@xyflow/react';
+import { NodeProps, NodeResizer, useReactFlow } from '@xyflow/react';
 import {
   File,
   FileCode,
@@ -12,6 +12,7 @@ import {
   DownloadSimple,
 } from '@phosphor-icons/react';
 import { NoteNodeData } from '../../types/canvas';
+import { FourWayHandles } from './FourWayHandles';
 
 export const FileNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
   const { setNodes } = useReactFlow();
@@ -89,34 +90,7 @@ export const FileNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       />
 
       {/* Connection Handles */}
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="top"
-        style={{ top: 0, left: '50%', transform: 'translate(-50%, -50%)' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        style={{ top: '50%', right: 0, transform: 'translate(50%, -50%)' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom"
-        style={{ bottom: 0, left: '50%', transform: 'translate(-50%, 50%)' }}
-        isConnectable={isConnectable}
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left"
-        style={{ top: '50%', left: 0, transform: 'translate(-50%, -50%)' }}
-        isConnectable={isConnectable}
-      />
+      <FourWayHandles isConnectable={isConnectable} />
 
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[var(--border-color)] drag-handle cursor-move">
