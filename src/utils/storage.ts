@@ -13,7 +13,7 @@ export const initialDefaultNodes: CanvasNode[] = [
     data: {
       title: 'Welcome to Canvas',
       content:
-        'This is a modern canvas powered by React Flow.\n\nKey features:\n- Drag nodes around to see edges automatically optimize attachment points\n- Click any title, content, or edge label to edit inline\n- Drag and drop files (PDFs, images, text) directly onto the canvas to view them!\n- Toggle between Light and Dark themes anytime using the top bar toggle',
+        'This is a modern canvas powered by React Flow.\n\nKey features:\n- Drag nodes around to see edges automatically optimize attachment points\n- Click any title or content to edit inline\n- Toggle between Light and Dark themes anytime using the top bar toggle',
       pinned: false,
       updatedAt: new Date().toISOString(),
     },
@@ -42,20 +42,6 @@ export const initialDefaultNodes: CanvasNode[] = [
       updatedAt: new Date().toISOString(),
     },
   },
-  {
-    id: 'file-demo-architecture',
-    type: 'fileNode',
-    position: { x: 250, y: 500 },
-    data: {
-      title: 'sample_document.pdf',
-      fileName: 'sample_document.pdf',
-      fileSize: '1.2 KB',
-      fileType: 'application/pdf',
-      fileUrl: 'data:application/pdf;base64,JVBERi0xLjQKJSDi48nNCiAxIDAgb2JqCjw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iaiAyIDAgb2JqCjw8L1R5cGUvUGFnZXMvQ291bnQgMS9LaWRzWzMgMCBSXT4+CmVuZG9iaiAzIDAgb2JqCjw8L1R5cGUvUGFnZS9QYXJlbnQgMiAwIFIvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL0NvbnRlbnRzIDQgMCBSL1Jlc291cmNlczw8Pj4+CmVuZG9iaiA0IDAgb2JqCjw8L0xlbmd0aCA0ND4+c3RyZWFtCkJUMCAwIDAgcmdiIC9GMSAxMiBUZiA3MiA3MTIgVGQgKEhlbGxvLCBXb3JsZCEpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUgCjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAxNSAwMDAwMCBuIAowMDY4IDAwMDAwIG4gCjAxMjUgMDAwMDAgbiAKMDIxNCAwMDAwMCBuIAp0cmFpbGVyCjw8L1NpemUgNS9Sb290IDEgMCBSPj4Kc3RhcnR4cmVmCjMwOQolJUVPRg==',
-      content: 'Sample PDF document preview.',
-      updatedAt: new Date().toISOString(),
-    },
-  },
 ];
 
 export const initialDefaultEdges: CanvasEdge[] = [
@@ -67,7 +53,6 @@ export const initialDefaultEdges: CanvasEdge[] = [
     targetHandle: 'left',
     type: 'customEdge',
     data: {
-      label: 'minimizes length',
       animated: true,
     },
   },
@@ -79,19 +64,6 @@ export const initialDefaultEdges: CanvasEdge[] = [
     targetHandle: 'left',
     type: 'customEdge',
     data: {
-      label: 'supports junctions',
-      animated: false,
-    },
-  },
-  {
-    id: 'e-file-welcome',
-    source: 'file-demo-architecture',
-    target: 'note-welcome',
-    sourceHandle: 'top',
-    targetHandle: 'bottom',
-    type: 'customEdge',
-    data: {
-      label: 'defines schema',
       animated: false,
     },
   },

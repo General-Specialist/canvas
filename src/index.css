@@ -135,6 +135,10 @@
   box-shadow: none !important;
 }
 
+.react-flow__attribution {
+  display: none !important;
+}
+
 
 
 /* Glassmorphism & Panel utilities */

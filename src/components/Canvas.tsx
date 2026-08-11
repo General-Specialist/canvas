@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -16,7 +16,6 @@ import '@xyflow/react/dist/style.css';
 import { Sun, Moon, Trash, Copy } from '@phosphor-icons/react';
 
 import { NoteNode } from './nodes/NoteNode';
-import { FileNode } from './nodes/FileNode';
 import { EdgeJunctionNode } from './nodes/EdgeJunctionNode';
 import { CustomEditableEdge } from './edges/CustomEditableEdge';
 import { useTheme } from '../context/ThemeContext';
@@ -34,7 +33,6 @@ import { optimizeAllEdges } from '../utils/edgeUtils';
 
 const nodeTypes = {
   noteNode: NoteNode,
-  fileNode: FileNode,
   edgeJunction: EdgeJunctionNode,
 };
 
@@ -50,8 +48,6 @@ const InnerCanvas: React.FC = () => {
 
   const { theme, toggleTheme } = useTheme();
   const { screenToFlowPosition, setViewport } = useReactFlow();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const pendingFilePosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Restore initial viewport on mount
   useEffect(() => {
@@ -85,7 +81,7 @@ const InnerCanvas: React.FC = () => {
           {
             ...connection,
             type: 'customEdge',
-            data: { label: '', animated: false },
+            data: { animated: false },
           },
           eds
         )
@@ -116,113 +112,6 @@ const InnerCanvas: React.FC = () => {
       setNodes((nds) => [...nds, newNode]);
     },
     [setNodes]
-  );
-
-  // Add File Node helper
-  const createFileNode = useCallback(
-    (file: File, position?: { x: number; y: number }) => {
-      const pos = position || {
-        x: 300,
-        y: 250,
-      };
-
-      const id = `file-${Date.now()}`;
-      const ext = file.name.split('.').pop()?.toLowerCase() || '';
-      const isTextFile =
-        file.type.startsWith('text/') ||
-        ['txt', 'md', 'json', 'xml', 'drawio', 'js', 'jsx', 'ts', 'tsx', 'html', 'css', 'py', 'sh', 'rs', 'go', 'c', 'cpp', 'java', 'sql', 'yaml', 'yml', 'csv', 'svg'].includes(ext);
-
-      const sizeStr =
-        file.size < 1024
-          ? `${file.size} B`
-          : file.size < 1024 * 1024
-          ? `${(file.size / 1024).toFixed(1)} KB`
-          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const fileUrl = event.target?.result as string;
-
-        if (isTextFile && file.size < 2 * 1024 * 1024) {
-          const textReader = new FileReader();
-          textReader.onload = (textEvent) => {
-            const textContent = (textEvent.target?.result as string) || '';
-            const newNode: CanvasNode = {
-              id,
-              type: 'fileNode',
-              position: pos,
-              data: {
-                title: file.name,
-                fileName: file.name,
-                fileSize: sizeStr,
-                fileType: file.type || ext.toUpperCase() || 'Document',
-                fileUrl,
-                content: textContent,
-                updatedAt: new Date().toISOString(),
-              },
-            };
-            setNodes((nds) => [...nds, newNode]);
-          };
-          textReader.readAsText(file);
-        } else {
-          const newNode: CanvasNode = {
-            id,
-            type: 'fileNode',
-            position: pos,
-            data: {
-              title: file.name,
-              fileName: file.name,
-              fileSize: sizeStr,
-              fileType: file.type || ext.toUpperCase() || 'Document',
-              fileUrl,
-              content: `File: ${file.name}\nSize: ${sizeStr}`,
-              updatedAt: new Date().toISOString(),
-            },
-          };
-          setNodes((nds) => [...nds, newNode]);
-        }
-      };
-
-      reader.readAsDataURL(file);
-    },
-    [setNodes]
-  );
-
-  const handleAddFileNode = useCallback(() => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  }, []);
-
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    createFileNode(files[0], pendingFilePosRef.current || undefined);
-    pendingFilePosRef.current = null;
-    e.target.value = '';
-  };
-
-  // Drag & Drop File Handling onto Canvas
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length === 0) return;
-
-      const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      files.forEach((file, index) => {
-        createFileNode(file, {
-          x: flowPosition.x + index * 30,
-          y: flowPosition.y + index * 30,
-        });
-      });
-    },
-    [createFileNode, screenToFlowPosition]
   );
 
   // Right-click node handler
@@ -310,13 +199,8 @@ const InnerCanvas: React.FC = () => {
   return (
     <div
       className="relative w-screen h-screen overflow-hidden bg-[var(--canvas-bg)] text-[var(--text-normal)] transition-colors duration-200"
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
       onClick={handlePaneClick}
     >
-      {/* Hidden File Input */}
-      <input type="file" ref={fileInputRef} onChange={handleFileSelected} className="hidden" />
-
       {/* Minimalist Floating Theme Toggle Button */}
       <button
         onClick={toggleTheme}
@@ -346,17 +230,6 @@ const InnerCanvas: React.FC = () => {
             className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors cursor-pointer"
           >
             + Add Note
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              pendingFilePosRef.current = menu.flowPosition;
-              handleAddFileNode();
-              setMenu(null);
-            }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors cursor-pointer"
-          >
-            + Add File
           </button>
         </div>
       )}
@@ -410,6 +283,7 @@ const InnerCanvas: React.FC = () => {
         maxZoom={2.5}
         defaultEdgeOptions={{ type: 'customEdge' }}
         connectionMode={ConnectionMode.Loose}
+        proOptions={{ hideAttribution: true }}
         className="bg-[var(--canvas-bg)]"
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color={dotsColor} />
