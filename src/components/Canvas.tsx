@@ -443,23 +443,13 @@ const InnerCanvas: React.FC = () => {
       onClick={handlePaneClick}
     >
       {isGroupMode && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-medium text-xs shadow-lg border border-blue-400/30 animate-pulse select-none">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-medium text-xs shadow-lg border border-blue-400/30 select-none">
           <SquaresFour className="w-4 h-4" />
           <span>Group Mode Active: Click or drag-select nodes ({toggledNodeIds.size} selected). Release Ctrl/Cmd+G to group.</span>
         </div>
       )}
 
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        {selectedCount > 0 && (
-          <button
-            onClick={handleGroupSelectedNodes}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-md transition-all cursor-pointer animate-fade-in"
-            title="Group Selected Nodes"
-          >
-            <SquaresFour className="w-4 h-4" />
-            <span>Group ({selectedCount})</span>
-          </button>
-        )}
         <button
           onClick={toggleTheme}
           className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[var(--sidebar-bg)] hover:bg-[var(--sidebar-hover-bg)] text-[var(--text-hover)] border border-[var(--border-color)] text-xs font-medium shadow-md transition-all cursor-pointer"
@@ -473,6 +463,7 @@ const InnerCanvas: React.FC = () => {
           <span className="capitalize">{theme === 'dark' ? 'Light' : 'Dark'}</span>
         </button>
       </div>
+
 
       {menu && (
         <div
