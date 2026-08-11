@@ -57,34 +57,22 @@ const InnerCanvas: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { screenToFlowPosition, setViewport, getNodes } = useReactFlow();
 
-  // Restore initial viewport on mount
   useEffect(() => {
-    const savedViewport = loadSavedViewport();
-    setViewport(savedViewport);
+    setViewport(loadSavedViewport());
   }, [setViewport]);
 
-  // Persist nodes on changes
   useEffect(() => {
     saveNodes(nodes);
   }, [nodes]);
 
-  // Persist edges on changes
   useEffect(() => {
     saveEdges(edges);
   }, [edges]);
 
-  // Ensure group containers have adequate top clearance for 48px titles
   useEffect(() => {
-    setNodes((prevNodes) => {
-      const cleared = ensureGroupTitleClearance(prevNodes);
-      if (cleared !== prevNodes) {
-        return cleared;
-      }
-      return prevNodes;
-    });
+    setNodes((prev) => ensureGroupTitleClearance(prev));
   }, [setNodes]);
 
-  // Grouping Logic
   const executeGroup = useCallback(
     (targetNodeIds: string[]) => {
       if (targetNodeIds.length === 0) return;
@@ -200,7 +188,6 @@ const InnerCanvas: React.FC = () => {
   // Group Mode State
   const [isGroupMode, setIsGroupMode] = useState(false);
   const isGroupModeRef = useRef(false);
-
   const [toggledNodeIds, setToggledNodeIds] = useState<Set<string>>(new Set());
   const toggledNodeIdsRef = useRef<Set<string>>(new Set());
 
@@ -209,11 +196,8 @@ const InnerCanvas: React.FC = () => {
       if (isGroupModeRef.current) {
         setToggledNodeIds((prev) => {
           const next = new Set(prev);
-          if (next.has(node.id)) {
-            next.delete(node.id);
-          } else {
-            next.add(node.id);
-          }
+          if (next.has(node.id)) next.delete(node.id);
+          else next.add(node.id);
           toggledNodeIdsRef.current = next;
           return next;
         });
@@ -229,11 +213,8 @@ const InnerCanvas: React.FC = () => {
         setToggledNodeIds((prev) => {
           const next = new Set(prev);
           selectedNodes.forEach((n) => {
-            if (next.has(n.id)) {
-              next.delete(n.id);
-            } else {
-              next.add(n.id);
-            }
+            if (next.has(n.id)) next.delete(n.id);
+            else next.add(n.id);
           });
           toggledNodeIdsRef.current = next;
           return next;
@@ -242,13 +223,23 @@ const InnerCanvas: React.FC = () => {
     }
   }, [getNodes]);
 
+  const exitGroupMode = useCallback(() => {
+    if (isGroupModeRef.current) {
+      isGroupModeRef.current = false;
+      setIsGroupMode(false);
+      const nodesToGroup = Array.from(toggledNodeIdsRef.current);
+      if (nodesToGroup.length > 0) {
+        executeGroup(nodesToGroup);
+      }
+      toggledNodeIdsRef.current = new Set();
+      setToggledNodeIds(new Set());
+    }
+  }, [executeGroup]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      ) {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
 
@@ -271,46 +262,21 @@ const InnerCanvas: React.FC = () => {
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       if (isGroupModeRef.current && (key === 'g' || key === 'control' || key === 'meta')) {
-        isGroupModeRef.current = false;
-        setIsGroupMode(false);
-
-        const nodesToGroup = Array.from(toggledNodeIdsRef.current);
-        if (nodesToGroup.length > 0) {
-          executeGroup(nodesToGroup);
-        }
-
-        toggledNodeIdsRef.current = new Set();
-        setToggledNodeIds(new Set());
-      }
-    };
-
-    const handleBlur = () => {
-      if (isGroupModeRef.current) {
-        isGroupModeRef.current = false;
-        setIsGroupMode(false);
-
-        const nodesToGroup = Array.from(toggledNodeIdsRef.current);
-        if (nodesToGroup.length > 0) {
-          executeGroup(nodesToGroup);
-        }
-
-        toggledNodeIdsRef.current = new Set();
-        setToggledNodeIds(new Set());
+        exitGroupMode();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', handleBlur);
+    window.addEventListener('blur', exitGroupMode);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('blur', exitGroupMode);
     };
-  }, [executeGroup, handleUngroupSelectedNodes]);
+  }, [exitGroupMode, handleUngroupSelectedNodes]);
 
-  // Dynamic Edge Sync & Handle Optimization on Node Drag
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
     (_event, _node, allNodes) => {
       setEdges((prevEdges) => syncAutoEdges(allNodes, prevEdges) as CanvasEdge[]);
@@ -318,7 +284,6 @@ const InnerCanvas: React.FC = () => {
     [setEdges]
   );
 
-  // Native Handle Connection with Auto Edge Sync and Title Auto-Wrapping
   const handleConnect = useCallback(
     (connection: Connection) => {
       let updatedEdgesList: CanvasEdge[] = [];
@@ -344,7 +309,6 @@ const InnerCanvas: React.FC = () => {
     [nodes, setNodes, setEdges]
   );
 
-  // Auto-wrap titles on connected nodes when edges change
   useEffect(() => {
     setNodes((currentNodes) => {
       const { updatedNodes, modified } = autoWrapConnectedNodeTitles(currentNodes, edges);
@@ -352,7 +316,6 @@ const InnerCanvas: React.FC = () => {
     });
   }, [edges, setNodes]);
 
-  // Add New Note Node
   const handleAddNote = useCallback(
     (position?: { x: number; y: number }) => {
       const pos = position || {
@@ -360,36 +323,25 @@ const InnerCanvas: React.FC = () => {
         y: 200 + Math.random() * 50,
       };
 
-      const id = `note-${Date.now()}`;
-      const newNode: CanvasNode = {
-        id,
-        type: 'noteNode',
-        position: pos,
-        data: {
-          title: '',
-          content: '',
-          updatedAt: new Date().toISOString(),
+      setNodes((nds) => [
+        ...nds,
+        {
+          id: `note-${Date.now()}`,
+          type: 'noteNode',
+          position: pos,
+          data: { title: '', content: '', updatedAt: new Date().toISOString() },
         },
-      };
-      setNodes((nds) => [...nds, newNode]);
+      ]);
     },
     [setNodes]
   );
 
-  // Right-click node handler
-  const handleNodeContextMenu = useCallback(
-    (event: React.MouseEvent, node: CanvasNode) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setMenu(null);
-      setNodeMenu({
-        x: event.clientX,
-        y: event.clientY,
-        nodeId: node.id,
-      });
-    },
-    []
-  );
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: CanvasNode) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMenu(null);
+    setNodeMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+  }, []);
 
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
@@ -404,12 +356,7 @@ const InnerCanvas: React.FC = () => {
           .filter((n) => n.id !== nodeId)
           .map((n) => {
             if (n.parentId === nodeId) {
-              const absPos = getNodeAbsolutePos(n, nodeMap);
-              return {
-                ...n,
-                parentId: undefined,
-                position: absPos,
-              };
+              return { ...n, parentId: undefined, position: getNodeAbsolutePos(n, nodeMap) };
             }
             return n;
           });
@@ -432,12 +379,7 @@ const InnerCanvas: React.FC = () => {
         const nodeMap = new Map<string, CanvasNode>(currentNodes.map((n) => [n.id, n]));
         return currentNodes.map((n) => {
           if (n.parentId && deletedGroupIds.has(n.parentId)) {
-            const absPos = getNodeAbsolutePos(n, nodeMap);
-            return {
-              ...n,
-              parentId: undefined,
-              position: absPos,
-            };
+            return { ...n, parentId: undefined, position: getNodeAbsolutePos(n, nodeMap) };
           }
           return n;
         });
@@ -453,12 +395,10 @@ const InnerCanvas: React.FC = () => {
 
       const newId = `${nodeToCopy.type || 'node'}-${Date.now()}`;
       const newNode: CanvasNode = {
-        ...JSON.parse(JSON.stringify(nodeToCopy)),
+        ...nodeToCopy,
+        data: { ...nodeToCopy.data },
         id: newId,
-        position: {
-          x: nodeToCopy.position.x + 30,
-          y: nodeToCopy.position.y + 30,
-        },
+        position: { x: nodeToCopy.position.x + 30, y: nodeToCopy.position.y + 30 },
         selected: true,
       };
 
@@ -468,7 +408,6 @@ const InnerCanvas: React.FC = () => {
     [nodes, setNodes]
   );
 
-  // Right-click pane to open context menu
   const handlePaneContextMenu = useCallback(
     (e: React.MouseEvent | MouseEvent) => {
       e.preventDefault();
@@ -479,35 +418,21 @@ const InnerCanvas: React.FC = () => {
     [screenToFlowPosition]
   );
 
-  // Double click canvas to add note
   const handlePaneDoubleClick = useCallback(
     (e: React.MouseEvent) => {
-      const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      handleAddNote(flowPosition);
+      handleAddNote(screenToFlowPosition({ x: e.clientX, y: e.clientY }));
     },
     [handleAddNote, screenToFlowPosition]
   );
 
-  // Close context menu on click
   const handlePaneClick = useCallback(() => {
     setMenu(null);
     setNodeMenu(null);
   }, []);
 
-  // Save Viewport state on move end
-  const handleMoveEnd = useCallback(
-    (_event: MouseEvent | TouchEvent | null, viewport: { x: number; y: number; zoom: number }) => {
-      saveViewport(viewport);
-    },
-    []
-  );
-
   const displayNodes = React.useMemo(() => {
     if (!isGroupMode) return nodes;
-    return nodes.map((n) => ({
-      ...n,
-      selected: toggledNodeIds.has(n.id),
-    }));
+    return nodes.map((n) => ({ ...n, selected: toggledNodeIds.has(n.id) }));
   }, [nodes, isGroupMode, toggledNodeIds]);
 
   const selectedCount = nodes.filter((n) => n.selected).length;
@@ -517,7 +442,6 @@ const InnerCanvas: React.FC = () => {
       className="relative w-screen h-screen overflow-hidden bg-[var(--canvas-bg)] text-[var(--text-normal)] transition-colors duration-200"
       onClick={handlePaneClick}
     >
-      {/* Group Mode Active Banner */}
       {isGroupMode && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-medium text-xs shadow-lg border border-blue-400/30 animate-pulse select-none">
           <SquaresFour className="w-4 h-4" />
@@ -525,7 +449,6 @@ const InnerCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Minimalist Floating Theme Toggle & Quick Action Bar */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         {selectedCount > 0 && (
           <button
@@ -551,7 +474,6 @@ const InnerCanvas: React.FC = () => {
         </button>
       </div>
 
-      {/* Right Click Pane Context Menu */}
       {menu && (
         <div
           className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-48 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
@@ -583,7 +505,6 @@ const InnerCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Right Click Node Context Menu */}
       {nodeMenu && (
         <div
           className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-48 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
@@ -625,7 +546,6 @@ const InnerCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Main Infinite Canvas */}
       <ReactFlow
         nodes={displayNodes}
         edges={edges}
@@ -637,7 +557,7 @@ const InnerCanvas: React.FC = () => {
         onNodeContextMenu={handleNodeContextMenu}
         onNodesDelete={handleNodesDelete}
         onSelectionEnd={handleSelectionEnd}
-        onMoveEnd={handleMoveEnd}
+        onMoveEnd={(_e, viewport) => saveViewport(viewport)}
         onPaneClick={handlePaneClick}
         onPaneContextMenu={handlePaneContextMenu}
         onDoubleClick={handlePaneDoubleClick}
@@ -666,3 +586,4 @@ export const Canvas: React.FC = () => {
     </ReactFlowProvider>
   );
 };
+

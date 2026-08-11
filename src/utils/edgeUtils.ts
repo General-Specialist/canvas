@@ -43,8 +43,7 @@ export function autoWrapConnectedNodeTitles(
     if (directNode) list.push(directNode);
 
     if (groupChildrenMap.has(id)) {
-      const childIds = groupChildrenMap.get(id)!;
-      childIds.forEach((cid) => {
+      groupChildrenMap.get(id)!.forEach((cid) => {
         const cNode = nodeMap.get(cid);
         if (cNode) list.push(cNode);
       });
@@ -54,58 +53,36 @@ export function autoWrapConnectedNodeTitles(
 
   let modified = false;
   const newNodesMap = new Map<string, Node>();
-  nodes.forEach((n) => newNodesMap.set(n.id, JSON.parse(JSON.stringify(n))));
+  nodes.forEach((n) => newNodesMap.set(n.id, { ...n, data: { ...n.data } }));
 
   edges.forEach((edge) => {
     const sources = getNodesForId(edge.source);
     const targets = getNodesForId(edge.target);
 
-    sources.forEach((src) => {
-      const srcTitle = (src.data as any)?.title;
-      if (typeof srcTitle === 'string' && srcTitle.trim().length >= 2) {
-        targets.forEach((tgt) => {
-          if (tgt.id === src.id) return;
-          const currentTgt = newNodesMap.get(tgt.id)!;
-          const content = (currentTgt.data as any)?.content || '';
-          const newContent = autoWrapTitleInText(content, srcTitle);
+    [[sources, targets], [targets, sources]].forEach(([fromList, toList]) => {
+      fromList.forEach((src) => {
+        const srcTitle = (src.data as any)?.title;
+        if (typeof srcTitle === 'string' && srcTitle.trim().length >= 2) {
+          toList.forEach((tgt) => {
+            if (tgt.id === src.id) return;
+            const currentTgt = newNodesMap.get(tgt.id)!;
+            const content = (currentTgt.data as any)?.content || '';
+            const newContent = autoWrapTitleInText(content, srcTitle);
 
-          if (newContent !== content) {
-            modified = true;
-            newNodesMap.set(tgt.id, {
-              ...currentTgt,
-              data: {
-                ...currentTgt.data,
-                content: newContent,
-                updatedAt: new Date().toISOString(),
-              },
-            });
-          }
-        });
-      }
-    });
-
-    targets.forEach((tgt) => {
-      const tgtTitle = (tgt.data as any)?.title;
-      if (typeof tgtTitle === 'string' && tgtTitle.trim().length >= 2) {
-        sources.forEach((src) => {
-          if (src.id === tgt.id) return;
-          const currentSrc = newNodesMap.get(src.id)!;
-          const content = (currentSrc.data as any)?.content || '';
-          const newContent = autoWrapTitleInText(content, tgtTitle);
-
-          if (newContent !== content) {
-            modified = true;
-            newNodesMap.set(src.id, {
-              ...currentSrc,
-              data: {
-                ...currentSrc.data,
-                content: newContent,
-                updatedAt: new Date().toISOString(),
-              },
-            });
-          }
-        });
-      }
+            if (newContent !== content) {
+              modified = true;
+              newNodesMap.set(tgt.id, {
+                ...currentTgt,
+                data: {
+                  ...currentTgt.data,
+                  content: newContent,
+                  updatedAt: new Date().toISOString(),
+                },
+              });
+            }
+          });
+        }
+      });
     });
   });
 
@@ -147,37 +124,16 @@ function getNodeSideMidpoints(
   node: Node,
   nodeMap?: Map<string, Node>
 ): Record<string, HandlePosition> {
-  const defaultW = node.type === 'edgeJunction' ? 16 : NODE_DEFAULT_WIDTH;
-  const defaultH = node.type === 'edgeJunction' ? 16 : NODE_DEFAULT_HEIGHT;
-  const width = node.measured?.width || node.width || defaultW;
-  const height = node.measured?.height || node.height || defaultH;
+  const isJunction = node.type === 'edgeJunction';
+  const width = node.measured?.width || node.width || (isJunction ? 16 : NODE_DEFAULT_WIDTH);
+  const height = node.measured?.height || node.height || (isJunction ? 16 : NODE_DEFAULT_HEIGHT);
   const { x, y } = getNodeAbsolutePos(node, nodeMap);
 
   return {
-    top: {
-      x: x + width / 2,
-      y: y,
-      position: Position.Top,
-      id: 'top',
-    },
-    right: {
-      x: x + width,
-      y: y + height / 2,
-      position: Position.Right,
-      id: 'right',
-    },
-    bottom: {
-      x: x + width / 2,
-      y: y + height,
-      position: Position.Bottom,
-      id: 'bottom',
-    },
-    left: {
-      x: x,
-      y: y + height / 2,
-      position: Position.Left,
-      id: 'left',
-    },
+    top: { x: x + width / 2, y, position: Position.Top, id: 'top' },
+    right: { x: x + width, y: y + height / 2, position: Position.Right, id: 'right' },
+    bottom: { x: x + width / 2, y: y + height, position: Position.Bottom, id: 'bottom' },
+    left: { x, y: y + height / 2, position: Position.Left, id: 'left' },
   };
 }
 
@@ -186,7 +142,6 @@ function getOptimalHandles(
   targetNode: Node,
   nodeMap?: Map<string, Node>
 ): { sourceHandle: string; targetHandle: string } {
-  // If target is an EdgeJunctionNode or small node, allow handles to default
   const sourceSides = getNodeSideMidpoints(sourceNode, nodeMap);
   const targetSides = getNodeSideMidpoints(targetNode, nodeMap);
 
@@ -231,11 +186,7 @@ export function optimizeAllEdges(nodes: Node[], edges: Edge[]): Edge[] {
       return edge;
     }
 
-    return {
-      ...edge,
-      sourceHandle,
-      targetHandle,
-    };
+    return { ...edge, sourceHandle, targetHandle };
   });
 }
 
@@ -261,27 +212,23 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     }
   };
 
-  edges.forEach((edge) => {
-    addBaseEdge(edge);
-  });
+  edges.forEach((edge) => addBaseEdge(edge));
 
   // 3. Scan for Wiki-Links
   const titleToNodeIdsMap = new Map<string, string[]>();
   nodes.forEach((n) => {
-    const title = (n.data as any)?.title;
-    if (typeof title === 'string' && title.trim()) {
-      const lowerTitle = title.trim().toLowerCase();
-      const existing = titleToNodeIdsMap.get(lowerTitle) || [];
-      if (!existing.includes(n.id)) existing.push(n.id);
-      titleToNodeIdsMap.set(lowerTitle, existing);
-    }
-    const lowerId = n.id.trim().toLowerCase();
-    const existing = titleToNodeIdsMap.get(lowerId) || [];
-    if (!existing.includes(n.id)) existing.push(n.id);
-    titleToNodeIdsMap.set(lowerId, existing);
+    const addKey = (k?: string) => {
+      if (typeof k === 'string' && k.trim()) {
+        const lower = k.trim().toLowerCase();
+        const existing = titleToNodeIdsMap.get(lower) || [];
+        if (!existing.includes(n.id)) existing.push(n.id);
+        titleToNodeIdsMap.set(lower, existing);
+      }
+    };
+    addKey((n.data as any)?.title);
+    addKey(n.id);
   });
 
-  const requiredWikiEdgeKeys = new Set<string>();
   const wikiLinkRegex = /\[\[(.*?)\]\]/g;
 
   nodes.forEach((sourceNode) => {
@@ -307,8 +254,6 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
       if (matchingTargetIds) {
         matchingTargetIds.forEach((targetId) => {
           if (targetId !== sourceNode.id) {
-            const pairKey = `${targetId}->${sourceNode.id}`;
-            requiredWikiEdgeKeys.add(pairKey);
             addBaseEdge({
               id: `wiki-${targetId}-${sourceNode.id}`,
               source: targetId,
@@ -350,8 +295,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
       });
 
       if (relevantChildren.every((cid) => outgoingChildren.has(cid))) {
-        const key = `${group.id}->${targetId}`;
-        requiredGroupEdgeMap.set(key, {
+        requiredGroupEdgeMap.set(`${group.id}->${targetId}`, {
           source: group.id,
           target: targetId,
           childEdges: outgoingEdges,
@@ -369,8 +313,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
       });
 
       if (relevantChildren.every((cid) => incomingChildren.has(cid))) {
-        const key = `${targetId}->${group.id}`;
-        requiredGroupEdgeMap.set(key, {
+        requiredGroupEdgeMap.set(`${targetId}->${group.id}`, {
           source: targetId,
           target: group.id,
           childEdges: incomingEdges,
@@ -379,44 +322,36 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     });
   });
 
-  // Helper to check if a group edge is active (either auto-required or manual in edges)
   const isGroupEdgeActive = (sourceId: string, targetId: string) => {
     const pairKey = `${sourceId}->${targetId}`;
-    if (requiredGroupEdgeMap.has(pairKey)) return true;
-    return edges.some((e) => e.source === sourceId && e.target === targetId);
+    return requiredGroupEdgeMap.has(pairKey) || edges.some((e) => e.source === sourceId && e.target === targetId);
   };
 
   // 5. Reconcile and filter edges
   const nextEdges: Edge[] = [];
 
   baseEdges.forEach((edge) => {
-    // Check if this base edge is an individual child edge covered by an active group edge
     const sourceParent = nodes.find((n) => n.id === edge.source)?.parentId;
     const targetParent = nodes.find((n) => n.id === edge.target)?.parentId;
 
-    const coveredByGroupOut = sourceParent && isGroupEdgeActive(sourceParent, edge.target);
-    const coveredByGroupIn = targetParent && isGroupEdgeActive(edge.source, targetParent);
-    const coveredByGroupGroup = sourceParent && targetParent && isGroupEdgeActive(sourceParent, targetParent);
+    const coveredByOut = sourceParent && isGroupEdgeActive(sourceParent, edge.target);
+    const coveredByIn = targetParent && isGroupEdgeActive(edge.source, targetParent);
+    const coveredByBoth = sourceParent && targetParent && isGroupEdgeActive(sourceParent, targetParent);
 
-    if (!coveredByGroupOut && !coveredByGroupIn && !coveredByGroupGroup) {
+    if (!coveredByOut && !coveredByIn && !coveredByBoth) {
       nextEdges.push(edge);
     }
   });
 
-  // Add all required Group Auto-Edges
   requiredGroupEdgeMap.forEach((info, key) => {
     const existingGroupEdge = edges.find((e) => `${e.source}->${e.target}` === key);
-    const edgeId = existingGroupEdge?.id || `group-auto-${info.source}-${info.target}`;
-
     nextEdges.push({
-      id: edgeId,
+      id: existingGroupEdge?.id || `group-auto-${info.source}-${info.target}`,
       source: info.source,
       target: info.target,
       type: 'customEdge',
       markerEnd: { type: MarkerType.ArrowClosed },
-      data: {
-        isGroupAutoEdge: true,
-      },
+      data: { isGroupAutoEdge: true },
     });
   });
 
@@ -436,25 +371,16 @@ export function expandGroupEdges(groupIds: Set<string>, nodes: Node[], edges: Ed
     const edgesToAdd: Edge[] = [];
 
     newEdges.forEach((edge) => {
-      if (edge.source === groupId) {
+      const isSourceGroup = edge.source === groupId;
+      const isTargetGroup = edge.target === groupId;
+
+      if (isSourceGroup || isTargetGroup) {
         edgesToRemove.add(edge.id);
         childIds.forEach((childId) => {
           edgesToAdd.push({
-            id: `e-${childId}-${edge.target}-${Date.now()}`,
-            source: childId,
-            target: edge.target,
-            type: edge.type || 'customEdge',
-            markerEnd: edge.markerEnd || { type: MarkerType.ArrowClosed },
-            data: { ...edge.data },
-          });
-        });
-      } else if (edge.target === groupId) {
-        edgesToRemove.add(edge.id);
-        childIds.forEach((childId) => {
-          edgesToAdd.push({
-            id: `e-${edge.source}-${childId}-${Date.now()}`,
-            source: edge.source,
-            target: childId,
+            id: `e-${isSourceGroup ? childId : edge.source}-${isTargetGroup ? childId : edge.target}-${Date.now()}`,
+            source: isSourceGroup ? childId : edge.source,
+            target: isTargetGroup ? childId : edge.target,
             type: edge.type || 'customEdge',
             markerEnd: edge.markerEnd || { type: MarkerType.ArrowClosed },
             data: { ...edge.data },
@@ -475,7 +401,9 @@ export function ensureGroupTitleClearance<T extends Node>(nodes: T[]): T[] {
   if (groupNodes.length === 0) return nodes;
 
   let modified = false;
-  const nodeMap = new Map<string, T>(nodes.map((n) => [n.id, JSON.parse(JSON.stringify(n))]));
+  const nodeMap = new Map<string, T>(
+    nodes.map((n) => [n.id, { ...n, position: { ...n.position }, style: n.style ? { ...n.style } : undefined } as T])
+  );
 
   for (const group of groupNodes) {
     const children = Array.from(nodeMap.values()).filter((n) => n.parentId === group.id);
@@ -487,25 +415,17 @@ export function ensureGroupTitleClearance<T extends Node>(nodes: T[]): T[] {
       modified = true;
 
       const updatedGroup = nodeMap.get(group.id)!;
-      updatedGroup.position = {
-        ...updatedGroup.position,
-        y: Math.round(updatedGroup.position.y - diff),
-      };
+      updatedGroup.position.y = Math.round(updatedGroup.position.y - diff);
       const currentHeight = (updatedGroup.style?.height as number) || (updatedGroup.measured?.height as number) || 220;
-      updatedGroup.style = {
-        ...updatedGroup.style,
-        height: Math.round(currentHeight + diff),
-      };
+      updatedGroup.style = { ...updatedGroup.style, height: Math.round(currentHeight + diff) };
 
       for (const child of children) {
         const updatedChild = nodeMap.get(child.id)!;
-        updatedChild.position = {
-          ...updatedChild.position,
-          y: Math.round(updatedChild.position.y + diff),
-        };
+        updatedChild.position.y = Math.round(updatedChild.position.y + diff);
       }
     }
   }
 
   return modified ? (Array.from(nodeMap.values()) as T[]) : nodes;
 }
+

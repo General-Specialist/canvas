@@ -44,13 +44,7 @@ const initialDefaultNodes: CanvasNode[] = [
   },
 ];
 
-const initialDefaultEdges: CanvasEdge[] = [];
-
-const initialDefaultViewport: Viewport = {
-  x: 50,
-  y: 50,
-  zoom: 0.9,
-};
+const initialDefaultViewport: Viewport = { x: 50, y: 50, zoom: 0.9 };
 
 function getStorage<T>(key: string, defaultValue: T): T {
   try {
@@ -77,14 +71,13 @@ function setStorage<T>(key: string, value: T): void {
 
 export const loadSavedNodes = (): CanvasNode[] => getStorage(STORAGE_KEY_NODES, initialDefaultNodes);
 export const saveNodes = (nodes: CanvasNode[]): void => setStorage(STORAGE_KEY_NODES, nodes);
-export const loadSavedEdges = (): CanvasEdge[] => {
-  const edges = getStorage(STORAGE_KEY_EDGES, initialDefaultEdges);
-  return edges.map((edge) => ({
+export const loadSavedEdges = (): CanvasEdge[] =>
+  getStorage<CanvasEdge[]>(STORAGE_KEY_EDGES, []).map((edge) => ({
     ...edge,
     markerEnd: edge.markerEnd || { type: MarkerType.ArrowClosed },
   }));
-};
 export const saveEdges = (edges: CanvasEdge[]): void => setStorage(STORAGE_KEY_EDGES, edges);
 export const loadSavedViewport = (): Viewport => getStorage(STORAGE_KEY_VIEWPORT, initialDefaultViewport);
 export const saveViewport = (viewport: Viewport): void => setStorage(STORAGE_KEY_VIEWPORT, viewport);
+
 

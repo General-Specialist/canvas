@@ -27,5 +27,3 @@ interface CustomEdgeData {
 }
 
 export type CanvasEdge = Edge<CustomEdgeData>;
-
-

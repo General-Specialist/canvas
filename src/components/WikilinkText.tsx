@@ -24,10 +24,7 @@ export function parseWikilinks(text: string): WikilinkSegment[] {
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      result.push({
-        type: 'text',
-        content: text.slice(lastIndex, match.index),
-      });
+      result.push({ type: 'text', content: text.slice(lastIndex, match.index) });
     }
 
     const rawInner = match[1];
@@ -41,26 +38,16 @@ export function parseWikilinks(text: string): WikilinkSegment[] {
     }
 
     if (target) {
-      result.push({
-        type: 'wikilink',
-        content: display || target,
-        target: target,
-      });
+      result.push({ type: 'wikilink', content: display || target, target });
     } else {
-      result.push({
-        type: 'text',
-        content: '[[]]',
-      });
+      result.push({ type: 'text', content: '[[]]' });
     }
 
     lastIndex = regex.lastIndex;
   }
 
   if (lastIndex < text.length) {
-    result.push({
-      type: 'text',
-      content: text.slice(lastIndex),
-    });
+    result.push({ type: 'text', content: text.slice(lastIndex) });
   }
 
   return result;
@@ -91,19 +78,9 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
       });
 
       if (existingNode) {
-        setNodes((nds) =>
-          nds.map((n) => ({
-            ...n,
-            selected: n.id === existingNode.id,
-          }))
-        );
-        fitView({
-          nodes: [{ id: existingNode.id }],
-          duration: 500,
-          padding: 0.4,
-        });
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === existingNode.id })));
+        fitView({ nodes: [{ id: existingNode.id }], duration: 500, padding: 0.4 });
       } else {
-        // Create new node if target node does not exist yet (Obsidian style)
         const sourceNode = sourceNodeId ? allNodes.find((n) => n.id === sourceNodeId) : undefined;
         const basePos = sourceNode ? sourceNode.position : { x: 300, y: 200 };
         const newId = `note-${Date.now()}`;
@@ -114,46 +91,34 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
             x: basePos.x + 320,
             y: basePos.y + (Math.floor(Math.random() * 60) - 30),
           },
-          data: {
-            title: targetTitle,
-            content: '',
-            updatedAt: new Date().toISOString(),
-          },
+          data: { title: targetTitle, content: '', updatedAt: new Date().toISOString() },
           selected: true,
         };
 
         setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), newNode]);
-        setTimeout(() => {
-          fitView({
-            nodes: [{ id: newId }],
-            duration: 500,
-            padding: 0.4,
-          });
-        }, 50);
+        setTimeout(() => fitView({ nodes: [{ id: newId }], duration: 500, padding: 0.4 }), 50);
       }
     },
     [getNodes, setNodes, fitView, sourceNodeId]
   );
 
-  const segments = parseWikilinks(text);
-
   return (
     <span className={className} onClick={onTextClick}>
-      {segments.map((seg, idx) => {
-        if (seg.type === 'wikilink' && seg.target) {
-          return (
-            <span
-              key={idx}
-              onClick={(e) => handleLinkClick(seg.target!, e)}
-              className="text-[var(--wikilink-color)] hover:text-[var(--wikilink-hover)] font-semibold hover:underline cursor-pointer transition-colors"
-              title={`Jump to [[${seg.target}]]`}
-            >
-              {seg.content}
-            </span>
-          );
-        }
-        return <React.Fragment key={idx}>{seg.content}</React.Fragment>;
-      })}
+      {parseWikilinks(text).map((seg, idx) =>
+        seg.type === 'wikilink' && seg.target ? (
+          <span
+            key={idx}
+            onClick={(e) => handleLinkClick(seg.target!, e)}
+            className="text-[var(--wikilink-color)] hover:text-[var(--wikilink-hover)] font-semibold hover:underline cursor-pointer transition-colors"
+            title={`Jump to [[${seg.target}]]`}
+          >
+            {seg.content}
+          </span>
+        ) : (
+          <React.Fragment key={idx}>{seg.content}</React.Fragment>
+        )
+      )}
     </span>
   );
 };
+
