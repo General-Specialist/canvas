@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+:root,
+[data-theme="dark"] {
+  /* Provided raw Light Theme Variables */
+  --color-white: #FFFFFF;
+  --color-sidebar-white: #F9F8F7;
+  --color-icon-white: #FAFAFA;
+  --color-icon-hover-white: #F3F3F3;
+  --color-border-white: #EEEEEC;
+  --color-sidebar-hover-white: #E9E9E8;
+  --color-text-light-black: #A5A4A3;
+  --color-text-normal-black: #73726E;
+  --color-text-hover-black: #32302C;
+
+  /* Provided raw Dark Theme Variables */
+  --color-dark-bg: #191919;
+  --color-dark-sidebar: #202020;
+  --color-dark-icon-hover: #30302E;
+  --color-dark-border: #2A2A2A;
+  --color-dark-sidebar-hover: #2C2C2C;
+  --color-dark-text-light: #A8A49C;
+  --color-dark-text-normal: #9B9B9B;
+  --color-dark-text-hover: #FFFFFF;
+
+  /* Semantic Theme Mappings for Dark Mode */
+  --canvas-bg: var(--color-dark-bg);
+  --sidebar-bg: var(--color-dark-sidebar);
+  --icon-hover-bg: var(--color-dark-icon-hover);
+  --border-color: var(--color-dark-border);
+  --sidebar-hover-bg: var(--color-dark-sidebar-hover);
+  --text-light: var(--color-dark-text-light);
+  --text-normal: var(--color-dark-text-normal);
+  --text-hover: var(--color-dark-text-hover);
+
+  --node-bg: var(--color-dark-sidebar);
+  --node-border: var(--color-dark-border);
+  --node-hover: var(--color-dark-sidebar-hover);
+  --node-hover-ring: var(--color-dark-text-light);
+  --node-selected-ring: var(--color-dark-text-hover);
+  --handle-bg: var(--color-dark-text-normal);
+  --handle-border: var(--color-dark-bg);
+  --edge-stroke: var(--color-dark-text-normal);
+  --edge-stroke-selected: var(--color-dark-text-hover);
+  --dots-color: var(--color-dark-border);
+  --input-bg: var(--color-dark-bg);
+}
+
+[data-theme="light"] {
+  /* Semantic Theme Mappings for Light Mode */
+  --canvas-bg: var(--color-white);
+  --sidebar-bg: var(--color-sidebar-white);
+  --icon-hover-bg: var(--color-icon-hover-white);
+  --border-color: var(--color-border-white);
+  --sidebar-hover-bg: var(--color-sidebar-hover-white);
+  --text-light: var(--color-text-light-black);
+  --text-normal: var(--color-text-normal-black);
+  --text-hover: var(--color-text-hover-black);
+
+  --node-bg: var(--color-sidebar-white);
+  --node-border: var(--color-border-white);
+  --node-hover: var(--color-sidebar-hover-white);
+  --node-hover-ring: var(--color-text-light-black);
+  --node-selected-ring: var(--color-text-hover-black);
+  --handle-bg: var(--color-text-normal-black);
+  --handle-border: var(--color-white);
+  --edge-stroke: var(--color-text-normal-black);
+  --edge-stroke-selected: var(--color-text-hover-black);
+  --dots-color: var(--color-border-white);
+  --input-bg: var(--color-icon-white);
+}
+
+@layer base {
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--canvas-bg);
+    color: var(--text-normal);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* React Flow Custom Overrides using strictly defined theme variables */
+.react-flow__background {
+  background-color: var(--canvas-bg) !important;
+}
+
+.react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+  background-color: var(--handle-bg) !important;
+  border: 2px solid var(--handle-border) !important;
+  border-radius: 9999px !important;
+  z-index: 10 !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.react-flow__handle:hover {
+  background-color: var(--text-hover) !important;
+}
+
+.react-flow__handle-connecting {
+  background-color: var(--text-hover) !important;
+}
+
+.react-flow__handle-valid {
+  background-color: var(--text-hover) !important;
+}
+
+.react-flow__edge-path {
+  stroke: var(--edge-stroke) !important;
+  stroke-width: 2.5px !important;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3.5px !important;
+  stroke: var(--edge-stroke-selected) !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3.5px !important;
+  stroke: var(--edge-stroke-selected) !important;
+}
+
+.react-flow__node {
+  border-radius: 12px;
+}
+
+.react-flow__node.selected {
+  outline: 2px solid var(--node-selected-ring) !important;
+  box-shadow: none !important;
+}
+
+
+
+/* Glassmorphism & Panel utilities */
+.glass-panel {
+  background-color: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-normal);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-card {
+  background-color: var(--node-bg);
+  border: 1px solid var(--node-border);
+  color: var(--text-normal);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Hide scrollbars globally */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
