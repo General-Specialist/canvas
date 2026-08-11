@@ -1,5 +1,5 @@
 import { CanvasNode, CanvasEdge } from '../types/canvas';
-import { Viewport } from '@xyflow/react';
+import { Viewport, MarkerType } from '@xyflow/react';
 
 const STORAGE_KEY_NODES = 'infinite_canvas_nodes_v1';
 const STORAGE_KEY_EDGES = 'infinite_canvas_edges_v1';
@@ -52,6 +52,9 @@ const initialDefaultEdges: CanvasEdge[] = [
     sourceHandle: 'right',
     targetHandle: 'left',
     type: 'customEdge',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+    },
     data: {
       animated: true,
     },
@@ -63,6 +66,9 @@ const initialDefaultEdges: CanvasEdge[] = [
     sourceHandle: 'bottom',
     targetHandle: 'left',
     type: 'customEdge',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+    },
     data: {
       animated: false,
     },
@@ -100,7 +106,13 @@ function setStorage<T>(key: string, value: T): void {
 
 export const loadSavedNodes = (): CanvasNode[] => getStorage(STORAGE_KEY_NODES, initialDefaultNodes);
 export const saveNodes = (nodes: CanvasNode[]): void => setStorage(STORAGE_KEY_NODES, nodes);
-export const loadSavedEdges = (): CanvasEdge[] => getStorage(STORAGE_KEY_EDGES, initialDefaultEdges);
+export const loadSavedEdges = (): CanvasEdge[] => {
+  const edges = getStorage(STORAGE_KEY_EDGES, initialDefaultEdges);
+  return edges.map((edge) => ({
+    ...edge,
+    markerEnd: edge.markerEnd || { type: MarkerType.ArrowClosed },
+  }));
+};
 export const saveEdges = (edges: CanvasEdge[]): void => setStorage(STORAGE_KEY_EDGES, edges);
 export const loadSavedViewport = (): Viewport => getStorage(STORAGE_KEY_VIEWPORT, initialDefaultViewport);
 export const saveViewport = (viewport: Viewport): void => setStorage(STORAGE_KEY_VIEWPORT, viewport);

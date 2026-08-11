@@ -10,6 +10,7 @@ import {
   ConnectionMode,
   SelectionMode,
   addEdge,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Sun, Moon, Trash, Copy, SquaresFour } from '@phosphor-icons/react';
@@ -54,7 +55,7 @@ const InnerCanvas: React.FC = () => {
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
   const { theme, toggleTheme } = useTheme();
-  const { screenToFlowPosition, setViewport } = useReactFlow();
+  const { screenToFlowPosition, setViewport, getNodes } = useReactFlow();
 
   // Restore initial viewport on mount
   useEffect(() => {
@@ -84,75 +85,85 @@ const InnerCanvas: React.FC = () => {
   }, [setNodes]);
 
   // Grouping Logic
+  const executeGroup = useCallback(
+    (targetNodeIds: string[]) => {
+      if (targetNodeIds.length === 0) return;
+
+      setNodes((currentNodes) => {
+        const targetSet = new Set(targetNodeIds);
+        const selectedNodes = currentNodes.filter((n) => targetSet.has(n.id));
+        if (selectedNodes.length === 0) return currentNodes;
+
+        const nodeMap = new Map<string, CanvasNode>(currentNodes.map((n) => [n.id, n]));
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        selectedNodes.forEach((node) => {
+          const absPos = getNodeAbsolutePos(node, nodeMap);
+          const defaultW = node.type === 'noteNode' ? 260 : node.type === 'edgeJunction' ? 16 : 300;
+          const defaultH = node.type === 'noteNode' ? 100 : node.type === 'edgeJunction' ? 16 : 200;
+          const width = node.measured?.width || node.width || (node.style?.width as number) || defaultW;
+          const height = node.measured?.height || node.height || (node.style?.height as number) || defaultH;
+
+          minX = Math.min(minX, absPos.x);
+          minY = Math.min(minY, absPos.y);
+          maxX = Math.max(maxX, absPos.x + width);
+          maxY = Math.max(maxY, absPos.y + height);
+        });
+
+        const paddingTop = 140;
+        const paddingSide = 40;
+        const paddingBottom = 40;
+
+        const groupX = Math.round(minX - paddingSide);
+        const groupY = Math.round(minY - paddingTop);
+        const groupWidth = Math.round(Math.max(400, maxX - minX + paddingSide * 2));
+        const groupHeight = Math.round(Math.max(280, maxY - minY + paddingTop + paddingBottom));
+
+        const groupId = `group-${Date.now()}`;
+
+        const newGroupNode: CanvasNode = {
+          id: groupId,
+          type: 'groupNode',
+          position: { x: groupX, y: groupY },
+          style: { width: groupWidth, height: groupHeight },
+          data: {
+            title: `Group ${currentNodes.filter((n) => n.type === 'groupNode').length + 1}`,
+            color: 'blue',
+          },
+          selected: true,
+          zIndex: -1,
+        };
+
+        const updatedNodes = currentNodes.map((n) => {
+          if (targetSet.has(n.id)) {
+            const absPos = getNodeAbsolutePos(n, nodeMap);
+            return {
+              ...n,
+              parentId: groupId,
+              position: {
+                x: Math.round(absPos.x - groupX),
+                y: Math.round(absPos.y - groupY),
+              },
+              selected: false,
+            };
+          }
+          return n;
+        });
+
+        return [newGroupNode, ...updatedNodes];
+      });
+    },
+    [setNodes]
+  );
+
   const handleGroupSelectedNodes = useCallback(() => {
-    setNodes((currentNodes) => {
-      const selectedNodes = currentNodes.filter((n) => n.selected);
-      if (selectedNodes.length === 0) return currentNodes;
-
-      const nodeMap = new Map<string, CanvasNode>(currentNodes.map((n) => [n.id, n]));
-
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-
-      selectedNodes.forEach((node) => {
-        const absPos = getNodeAbsolutePos(node, nodeMap);
-        const defaultW = node.type === 'noteNode' ? 260 : node.type === 'edgeJunction' ? 16 : 300;
-        const defaultH = node.type === 'noteNode' ? 100 : node.type === 'edgeJunction' ? 16 : 200;
-        const width = node.measured?.width || node.width || (node.style?.width as number) || defaultW;
-        const height = node.measured?.height || node.height || (node.style?.height as number) || defaultH;
-
-        minX = Math.min(minX, absPos.x);
-        minY = Math.min(minY, absPos.y);
-        maxX = Math.max(maxX, absPos.x + width);
-        maxY = Math.max(maxY, absPos.y + height);
-      });
-
-      const paddingTop = 140;
-      const paddingSide = 40;
-      const paddingBottom = 40;
-
-      const groupX = Math.round(minX - paddingSide);
-      const groupY = Math.round(minY - paddingTop);
-      const groupWidth = Math.round(Math.max(400, maxX - minX + paddingSide * 2));
-      const groupHeight = Math.round(Math.max(280, maxY - minY + paddingTop + paddingBottom));
-
-      const groupId = `group-${Date.now()}`;
-      const selectedIds = new Set(selectedNodes.map((n) => n.id));
-
-      const newGroupNode: CanvasNode = {
-        id: groupId,
-        type: 'groupNode',
-        position: { x: groupX, y: groupY },
-        style: { width: groupWidth, height: groupHeight },
-        data: {
-          title: `Group ${currentNodes.filter((n) => n.type === 'groupNode').length + 1}`,
-          color: 'blue',
-        },
-        selected: true,
-        zIndex: -1,
-      };
-
-      const updatedNodes = currentNodes.map((n) => {
-        if (selectedIds.has(n.id)) {
-          const absPos = getNodeAbsolutePos(n, nodeMap);
-          return {
-            ...n,
-            parentId: groupId,
-            position: {
-              x: Math.round(absPos.x - groupX),
-              y: Math.round(absPos.y - groupY),
-            },
-            selected: false,
-          };
-        }
-        return n;
-      });
-
-      return [newGroupNode, ...updatedNodes];
-    });
-  }, [setNodes]);
+    const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
+    executeGroup(selectedIds);
+  }, [nodes, executeGroup]);
 
   const handleUngroupSelectedNodes = useCallback(() => {
     setNodes((currentNodes) => {
@@ -184,33 +195,53 @@ const InnerCanvas: React.FC = () => {
     });
   }, [setNodes, setEdges]);
 
-  const isCmdHeldRef = useRef(false);
-  const clickedNodesDuringCmdRef = useRef<Set<string>>(new Set());
+  // Group Mode State
+  const [isGroupMode, setIsGroupMode] = useState(false);
+  const isGroupModeRef = useRef(false);
+
+  const [toggledNodeIds, setToggledNodeIds] = useState<Set<string>>(new Set());
+  const toggledNodeIdsRef = useRef<Set<string>>(new Set());
 
   const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: CanvasNode) => {
-      if (event.metaKey || event.ctrlKey || isCmdHeldRef.current) {
-        clickedNodesDuringCmdRef.current.add(node.id);
+    (_event: React.MouseEvent, node: CanvasNode) => {
+      if (isGroupModeRef.current) {
+        setToggledNodeIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(node.id)) {
+            next.delete(node.id);
+          } else {
+            next.add(node.id);
+          }
+          toggledNodeIdsRef.current = next;
+          return next;
+        });
       }
     },
     []
   );
 
   const handleSelectionEnd = useCallback(() => {
-    setTimeout(() => {
-      handleGroupSelectedNodes();
-    }, 50);
-  }, [handleGroupSelectedNodes]);
+    if (isGroupModeRef.current) {
+      const selectedNodes = getNodes().filter((n) => n.selected);
+      if (selectedNodes.length > 0) {
+        setToggledNodeIds((prev) => {
+          const next = new Set(prev);
+          selectedNodes.forEach((n) => {
+            if (next.has(n.id)) {
+              next.delete(n.id);
+            } else {
+              next.add(n.id);
+            }
+          });
+          toggledNodeIdsRef.current = next;
+          return next;
+        });
+      }
+    }
+  }, [getNodes]);
 
-  // Global Keyboard Shortcuts
-  // - Holding Cmd/Ctrl and clicking multiple nodes then releasing Cmd/Ctrl (or pressing Cmd/Ctrl + G) automatically creates a group
-  // - Cmd/Ctrl + Shift + G ungroups
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' || e.key === 'Control') {
-        isCmdHeldRef.current = true;
-      }
-
       const target = e.target as HTMLElement | null;
       if (
         target &&
@@ -223,31 +254,59 @@ const InnerCanvas: React.FC = () => {
         e.preventDefault();
         if (e.shiftKey) {
           handleUngroupSelectedNodes();
-        } else {
-          handleGroupSelectedNodes();
+          return;
         }
-        clickedNodesDuringCmdRef.current.clear();
-        return;
+
+        if (!isGroupModeRef.current) {
+          isGroupModeRef.current = true;
+          setIsGroupMode(true);
+          toggledNodeIdsRef.current = new Set();
+          setToggledNodeIds(new Set());
+        }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' || e.key === 'Control') {
-        isCmdHeldRef.current = false;
-        if (clickedNodesDuringCmdRef.current.size >= 2) {
-          handleGroupSelectedNodes();
+      const key = e.key.toLowerCase();
+      if (isGroupModeRef.current && (key === 'g' || key === 'control' || key === 'meta')) {
+        isGroupModeRef.current = false;
+        setIsGroupMode(false);
+
+        const nodesToGroup = Array.from(toggledNodeIdsRef.current);
+        if (nodesToGroup.length > 0) {
+          executeGroup(nodesToGroup);
         }
-        clickedNodesDuringCmdRef.current.clear();
+
+        toggledNodeIdsRef.current = new Set();
+        setToggledNodeIds(new Set());
+      }
+    };
+
+    const handleBlur = () => {
+      if (isGroupModeRef.current) {
+        isGroupModeRef.current = false;
+        setIsGroupMode(false);
+
+        const nodesToGroup = Array.from(toggledNodeIdsRef.current);
+        if (nodesToGroup.length > 0) {
+          executeGroup(nodesToGroup);
+        }
+
+        toggledNodeIdsRef.current = new Set();
+        setToggledNodeIds(new Set());
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
     };
-  }, [handleGroupSelectedNodes, handleUngroupSelectedNodes]);
+  }, [executeGroup, handleUngroupSelectedNodes]);
 
   // Dynamic Minimum Length Edge Optimization on Node Drag
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
@@ -265,6 +324,7 @@ const InnerCanvas: React.FC = () => {
           {
             ...connection,
             type: 'customEdge',
+            markerEnd: { type: MarkerType.ArrowClosed },
             data: { animated: false },
           },
           eds
@@ -436,6 +496,14 @@ const InnerCanvas: React.FC = () => {
     []
   );
 
+  const displayNodes = React.useMemo(() => {
+    if (!isGroupMode) return nodes;
+    return nodes.map((n) => ({
+      ...n,
+      selected: toggledNodeIds.has(n.id),
+    }));
+  }, [nodes, isGroupMode, toggledNodeIds]);
+
   const selectedCount = nodes.filter((n) => n.selected).length;
 
   return (
@@ -443,13 +511,21 @@ const InnerCanvas: React.FC = () => {
       className="relative w-screen h-screen overflow-hidden bg-[var(--canvas-bg)] text-[var(--text-normal)] transition-colors duration-200"
       onClick={handlePaneClick}
     >
+      {/* Group Mode Active Banner */}
+      {isGroupMode && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-medium text-xs shadow-lg border border-blue-400/30 animate-pulse select-none">
+          <SquaresFour className="w-4 h-4" />
+          <span>Group Mode Active: Click or drag-select nodes ({toggledNodeIds.size} selected). Release Ctrl/Cmd+G to group.</span>
+        </div>
+      )}
+
       {/* Minimalist Floating Theme Toggle & Quick Action Bar */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         {selectedCount > 0 && (
           <button
             onClick={handleGroupSelectedNodes}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow-md transition-all cursor-pointer animate-fade-in"
-            title="Group Selected Nodes (Cmd+G)"
+            title="Group Selected Nodes"
           >
             <SquaresFour className="w-4 h-4" />
             <span>Group ({selectedCount})</span>
@@ -495,7 +571,7 @@ const InnerCanvas: React.FC = () => {
               className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer"
             >
               <SquaresFour className="w-3.5 h-3.5 text-blue-500" />
-              <span>Group Selected (Cmd+G)</span>
+              <span>Group Selected</span>
             </button>
           )}
         </div>
@@ -517,7 +593,7 @@ const InnerCanvas: React.FC = () => {
               className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer border-b border-[var(--border-color)]"
             >
               <SquaresFour className="w-3.5 h-3.5 text-blue-500" />
-              <span>Group Selected (Cmd+G)</span>
+              <span>Group Selected</span>
             </button>
           )}
           <button
@@ -545,7 +621,7 @@ const InnerCanvas: React.FC = () => {
 
       {/* Main Infinite Canvas */}
       <ReactFlow
-        nodes={nodes}
+        nodes={displayNodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -564,11 +640,11 @@ const InnerCanvas: React.FC = () => {
         fitView
         minZoom={0.1}
         maxZoom={2.5}
-        selectionOnDrag={false}
-        panOnDrag={true}
-        selectionKeyCode={['Meta', 'Control']}
+        selectionOnDrag={isGroupMode}
+        panOnDrag={!isGroupMode}
+        selectionKeyCode={isGroupMode ? null : ['Meta', 'Control']}
         selectionMode={SelectionMode.Partial}
-        defaultEdgeOptions={{ type: 'customEdge' }}
+        defaultEdgeOptions={{ type: 'customEdge', markerEnd: { type: MarkerType.ArrowClosed } }}
         connectionMode={ConnectionMode.Loose}
         proOptions={{ hideAttribution: true }}
         className="bg-[var(--canvas-bg)]"

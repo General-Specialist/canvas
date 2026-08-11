@@ -1,4 +1,4 @@
-import { Node, Edge, Position } from '@xyflow/react';
+import { Node, Edge, Position, MarkerType } from '@xyflow/react';
 
 interface HandlePosition {
   x: number;
@@ -162,6 +162,7 @@ export function consolidateGroupEdges(nodes: Node[], edges: Edge[]): Edge[] {
             sourceHandle: 'right',
             targetHandle: 'left',
             type: 'customEdge',
+            markerEnd: { type: MarkerType.ArrowClosed },
             data: { animated: false },
           });
         }
@@ -194,6 +195,7 @@ export function consolidateGroupEdges(nodes: Node[], edges: Edge[]): Edge[] {
             sourceHandle: 'right',
             targetHandle: 'left',
             type: 'customEdge',
+            markerEnd: { type: MarkerType.ArrowClosed },
             data: { animated: false },
           });
         }
@@ -223,6 +225,7 @@ export function expandGroupEdges(groupIds: Set<string>, nodes: Node[], edges: Ed
             source: childId,
             target: edge.target,
             type: edge.type || 'customEdge',
+            markerEnd: edge.markerEnd || { type: MarkerType.ArrowClosed },
             data: { ...edge.data },
           });
         });
@@ -234,6 +237,7 @@ export function expandGroupEdges(groupIds: Set<string>, nodes: Node[], edges: Ed
             source: edge.source,
             target: childId,
             type: edge.type || 'customEdge',
+            markerEnd: edge.markerEnd || { type: MarkerType.ArrowClosed },
             data: { ...edge.data },
           });
         });

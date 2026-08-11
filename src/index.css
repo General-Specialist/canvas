@@ -119,6 +119,18 @@
   stroke: var(--edge-stroke-selected) !important;
 }
 
+.react-flow__marker path {
+  fill: var(--edge-stroke) !important;
+  stroke: var(--edge-stroke) !important;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+.react-flow__edge:hover .react-flow__marker path,
+.react-flow__edge.selected .react-flow__marker path {
+  fill: var(--edge-stroke-selected) !important;
+  stroke: var(--edge-stroke-selected) !important;
+}
+
 .react-flow__node {
   border-radius: 12px;
   -webkit-font-smoothing: antialiased;
