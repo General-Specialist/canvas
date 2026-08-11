@@ -1,13 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
-  Background,
   useNodesState,
   useEdgesState,
   useReactFlow,
   Connection,
   ReactFlowProvider,
-  BackgroundVariant,
   OnNodeDrag,
   ConnectionMode,
   addEdge,
@@ -104,7 +102,7 @@ const InnerCanvas: React.FC = () => {
         type: 'noteNode',
         position: pos,
         data: {
-          title: 'New Note',
+          title: '',
           content: '',
           updatedAt: new Date().toISOString(),
         },
@@ -194,7 +192,6 @@ const InnerCanvas: React.FC = () => {
     []
   );
 
-  const dotsColor = theme === 'dark' ? '#2A2A2A' : '#EEEEEC';
 
   return (
     <div
@@ -285,9 +282,7 @@ const InnerCanvas: React.FC = () => {
         connectionMode={ConnectionMode.Loose}
         proOptions={{ hideAttribution: true }}
         className="bg-[var(--canvas-bg)]"
-      >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color={dotsColor} />
-      </ReactFlow>
+      />
     </div>
   );
 };

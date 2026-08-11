@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
-import { NodeProps, NodeResizer, useReactFlow } from '@xyflow/react';
+import React, { useState, useEffect, useLayoutEffect, useRef, memo } from 'react';
+import { NodeProps, useReactFlow } from '@xyflow/react';
 import { NoteNodeData } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
 
@@ -7,34 +7,39 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
   const { setNodes } = useReactFlow();
   const nodeData = data as unknown as NoteNodeData;
 
-  const getInitialText = (title?: string, content?: string) => {
-    const t = title ?? '';
-    const c = content ?? '';
-    if (!t && !c) return '';
-    if (!c) return t;
-    if (!t) return c;
-    if (c.startsWith(t)) return c;
-    return `${t}\n${c}`;
-  };
+  const [localTitle, setLocalTitle] = useState(nodeData.title || '');
+  const [localContent, setLocalContent] = useState(nodeData.content || '');
 
-  const [localText, setLocalText] = useState(() =>
-    getInitialText(nodeData.title, nodeData.content)
-  );
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const lines = localText.split('\n');
-    const currentFirst = lines[0].trim();
-    const currentRest = lines.slice(1).join('\n');
-
-    const incomingFirst = (nodeData.title || '').trim();
-    const incomingRest = nodeData.content || '';
-
-    if (incomingFirst !== currentFirst || incomingRest !== currentRest) {
-      setLocalText(getInitialText(nodeData.title, nodeData.content));
+    if ((nodeData.title || '') !== localTitle) {
+      setLocalTitle(nodeData.title || '');
     }
-  }, [nodeData.title, nodeData.content]);
+  }, [nodeData.title]);
+
+  useEffect(() => {
+    if ((nodeData.content || '') !== localContent) {
+      setLocalContent(nodeData.content || '');
+    }
+  }, [nodeData.content]);
+
+  // Dynamically adjust title textarea height to fit text content
+  useLayoutEffect(() => {
+    if (titleRef.current) {
+      titleRef.current.style.height = 'auto';
+      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
+    }
+  }, [localTitle]);
+
+  // Dynamically adjust content textarea height to fit text content
+  useLayoutEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.style.height = 'auto';
+      contentRef.current.style.height = `${contentRef.current.scrollHeight}px`;
+    }
+  }, [localContent]);
 
   const updateNodeData = (updates: Partial<NoteNodeData>) => {
     setNodes((nds) =>
@@ -54,18 +59,16 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
     );
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
-    setLocalText(val);
+    setLocalTitle(val);
+    updateNodeData({ title: val });
+  };
 
-    const lines = val.split('\n');
-    const firstLine = lines[0];
-    const restOfText = lines.slice(1).join('\n');
-
-    updateNodeData({
-      title: firstLine || 'Untitled Note',
-      content: restOfText,
-    });
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setLocalContent(val);
+    updateNodeData({ content: val });
   };
 
   const [isHovered, setIsHovered] = useState(false);
@@ -74,7 +77,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative w-full h-full min-w-[200px] min-h-[120px] rounded-xl border border-[var(--node-border)] bg-[var(--node-bg)] flex flex-col p-3.5 transition-shadow duration-150 ${
+      className={`relative w-[260px] min-h-[100px] rounded-xl border border-[var(--node-border)] bg-[var(--node-bg)] flex flex-col p-3.5 transition-shadow duration-150 ${
         selected
           ? 'ring-2 ring-[var(--node-selected-ring)]'
           : isHovered
@@ -82,23 +85,33 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
           : ''
       }`}
     >
-      <NodeResizer
-        minWidth={200}
-        minHeight={120}
-        isVisible={selected}
-        color="var(--node-selected-ring)"
-      />
-
       {/* Handles */}
       <FourWayHandles isConnectable={isConnectable} />
 
-      {/* Single Continuous Note Editor */}
+      {/* Auto-growing Title (2x bigger than content text: 24px vs 12px) */}
       <textarea
-        ref={textareaRef}
-        value={localText}
-        onChange={handleTextChange}
-        placeholder={"Untitled Note\nType your notes here..."}
-        className="nodrag nopan w-full h-full bg-transparent text-xs font-medium text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none resize-none leading-relaxed font-sans cursor-text overflow-auto"
+        ref={titleRef}
+        rows={1}
+        value={localTitle}
+        onChange={handleTitleChange}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            contentRef.current?.focus();
+          }
+        }}
+        placeholder="Node name"
+        className="nodrag nopan w-full bg-transparent text-2xl font-bold text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none mb-1.5 font-sans leading-tight resize-none overflow-hidden"
+      />
+
+      {/* Auto-growing Content */}
+      <textarea
+        ref={contentRef}
+        rows={1}
+        value={localContent}
+        onChange={handleContentChange}
+        placeholder="Type your notes here..."
+        className="nodrag nopan w-full bg-transparent text-xs font-medium text-[var(--text-normal)] placeholder-[var(--text-light)] focus:outline-none resize-none leading-relaxed font-sans cursor-text overflow-hidden antialiased subpixel-antialiased"
       />
     </div>
   );
