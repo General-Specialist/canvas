@@ -133,7 +133,7 @@ const InnerCanvas: React.FC = () => {
           style: { width: groupWidth, height: groupHeight },
           data: {
             title: '',
-            color: 'blue',
+            color: 'featherGreen',
           },
           selected: true,
           zIndex: -1,
@@ -459,7 +459,7 @@ const InnerCanvas: React.FC = () => {
       onClick={handlePaneClick}
     >
       {isGroupMode && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-medium text-xs shadow-lg border border-blue-400/30 select-none">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#58CC02] text-white font-medium text-xs shadow-lg border border-[#89E219]/30 select-none">
           <SquaresFour className="w-4 h-4" />
           <span>Group Mode Active: Click or drag-select nodes ({toggledNodeIds.size} selected). Release Ctrl/Cmd+G to group.</span>
         </div>
@@ -505,7 +505,7 @@ const InnerCanvas: React.FC = () => {
               }}
               className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer"
             >
-              <SquaresFour className="w-3.5 h-3.5 text-blue-500" />
+              <SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />
               <span>Group Selected</span>
             </button>
           )}
@@ -526,7 +526,7 @@ const InnerCanvas: React.FC = () => {
               }}
               className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer border-b border-[var(--border-color)]"
             >
-              <SquaresFour className="w-3.5 h-3.5 text-blue-500" />
+              <SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />
               <span>Group Selected</span>
             </button>
           )}
@@ -545,7 +545,7 @@ const InnerCanvas: React.FC = () => {
               e.stopPropagation();
               handleDeleteNode(nodeMenu.nodeId);
             }}
-            className="w-full text-left px-3 py-1.5 hover:bg-red-500/10 text-red-500 hover:text-red-600 font-semibold transition-colors flex items-center gap-2 cursor-pointer"
+            className="w-full text-left px-3 py-1.5 hover:bg-[#FF4B4B]/10 text-[#FF4B4B] hover:text-[#FF4B4B] font-semibold transition-colors flex items-center gap-2 cursor-pointer"
           >
             <Trash className="w-3.5 h-3.5" />
             <span>Delete Node</span>

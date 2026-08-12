@@ -120,7 +120,7 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
                 }
               }}
               placeholder="Edge label..."
-              className="bg-[var(--sidebar-bg)] border border-blue-500 text-[var(--text-normal)] text-xs px-2.5 py-1 rounded-lg shadow-lg focus:outline-none min-w-[80px] max-w-[200px] text-center font-medium"
+              className="bg-[var(--sidebar-bg)] border border-[#58CC02] text-[var(--text-normal)] text-xs px-2.5 py-1 rounded-lg shadow-lg focus:outline-none min-w-[80px] max-w-[200px] text-center font-medium"
             />
           ) : (
             <>
@@ -151,7 +151,7 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
               {selected && (
                 <button
                   onClick={deleteEdge}
-                  className="bg-[var(--sidebar-hover-bg)] border border-[var(--border-color)] text-[var(--text-hover)] p-1 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-all cursor-pointer shadow-sm"
+                  className="bg-[var(--sidebar-hover-bg)] border border-[var(--border-color)] text-[var(--text-hover)] p-1 rounded-full hover:bg-[#FF4B4B]/10 hover:text-[#FF4B4B] transition-all cursor-pointer shadow-sm"
                   title="Delete Edge"
                 >
                   <X className="w-3 h-3" />

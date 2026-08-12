@@ -69,8 +69,8 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
         minWidth={180}
         minHeight={90}
         isVisible={selected}
-        lineClassName="!border-blue-500 !border-dashed"
-        handleClassName="!w-3 !h-3 !bg-blue-500 !border-2 !border-white !rounded-full"
+        lineClassName="!border-[#58CC02] !border-dashed"
+        handleClassName="!w-3 !h-3 !bg-[#58CC02] !border-2 !border-white !rounded-full"
       />
 
       {/* Title Field */}

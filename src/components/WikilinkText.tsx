@@ -31,7 +31,7 @@ const KaTeXRenderer: React.FC<{ math: string; displayMode: boolean }> = React.me
     }, [math, displayMode]);
 
     if (html === null) {
-      return <span className="text-red-500 font-mono">{math}</span>;
+      return <span className="text-[#FF4B4B] font-mono">{math}</span>;
     }
 
     return (
