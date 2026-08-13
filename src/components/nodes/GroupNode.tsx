@@ -1,12 +1,11 @@
 import React, { useState, memo, useCallback, useRef, useLayoutEffect } from 'react';
 import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
-import { Trash, Palette } from '@phosphor-icons/react';
 import { GroupNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
-import { expandGroupEdges, syncAutoEdges } from '../../utils/edgeUtils';
+import { syncAutoEdges } from '../../utils/edgeUtils';
 import { WikilinkText } from '../WikilinkText';
 
-const COLOR_THEMES: Record<string, { name: string; bg: string; border: string; text: string; dot: string }> = {
+export const COLOR_THEMES: Record<string, { name: string; bg: string; border: string; text: string; dot: string }> = {
   featherGreen: {
     name: 'Feather Green',
     bg: 'bg-transparent',
@@ -74,12 +73,11 @@ const COLOR_ALIAS: Record<string, string> = {
 };
 
 export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
-  const { setNodes, setEdges, getNodes } = useReactFlow();
+  const { setNodes, setEdges } = useReactFlow();
   const groupData = data as unknown as GroupNodeData;
 
   const titleText = groupData.title || '';
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const rawColor = groupData.color || 'featherGreen';
@@ -103,34 +101,6 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
       });
     },
     [id, setNodes, setEdges]
-  );
-
-  const handleUngroup = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setEdges((eds) => expandGroupEdges(new Set([id]), getNodes(), eds) as CanvasEdge[]);
-      setNodes((nds) => {
-        const groupNode = nds.find((n) => n.id === id);
-        if (!groupNode) return nds;
-
-        const { x: groupX, y: groupY } = groupNode.position;
-
-        return nds
-          .filter((n) => n.id !== id)
-          .map((n) => {
-            if (n.parentId === id) {
-              return {
-                ...n,
-                parentId: undefined,
-                position: { x: groupX + n.position.x, y: groupY + n.position.y },
-                selected: true,
-              };
-            }
-            return n;
-          });
-      });
-    },
-    [getNodes, id, setEdges, setNodes]
   );
 
   return (
@@ -183,47 +153,6 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
               )}
             </div>
           )}
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-1 shrink-0 ml-2">
-          <div className="relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowColorPicker(!showColorPicker);
-              }}
-              className="nodrag nopan p-1 rounded-md hover:bg-black/10 dark:hover:bg-white/10 text-xs text-[var(--text-light)] hover:text-[var(--text-normal)] transition-colors cursor-pointer"
-              title="Change Color"
-            >
-              <Palette className="w-3.5 h-3.5" />
-            </button>
-
-            {showColorPicker && (
-              <div className="nodrag nopan absolute right-0 top-full mt-1 z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl p-1.5 shadow-xl flex gap-1.5">
-                {Object.entries(COLOR_THEMES).map(([cKey, t]) => (
-                  <button
-                    key={cKey}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateGroupData({ color: cKey });
-                      setShowColorPicker(false);
-                    }}
-                    className={`w-4 h-4 rounded-full border border-black/20 capitalize ${t.dot}`}
-                    title={t.name}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={handleUngroup}
-            className="nodrag nopan p-1 rounded-md hover:bg-[#FF4B4B]/10 text-[#FF4B4B] hover:text-[#FF4B4B] transition-colors cursor-pointer"
-            title="Ungroup (Cmd+Shift+G)"
-          >
-            <Trash className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 

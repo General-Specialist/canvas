@@ -1,5 +1,6 @@
 import { CanvasNode, CanvasEdge } from '../types/canvas';
 import { Viewport, MarkerType } from '@xyflow/react';
+import { sortNodesByDepth } from './edgeUtils';
 
 const STORAGE_KEY_NODES = 'infinite_canvas_nodes_v1';
 const STORAGE_KEY_EDGES = 'infinite_canvas_edges_v1';
@@ -74,7 +75,7 @@ function setStorage<T>(key: string, value: T): void {
 
 export const loadSavedNodes = (): CanvasNode[] => {
   const nodes = getStorage(STORAGE_KEY_NODES, initialDefaultNodes);
-  return nodes.map((node) => {
+  const formatted = nodes.map((node) => {
     if (node.type === 'noteNode' && (!node.style || !node.style.width)) {
       return {
         ...node,
@@ -83,6 +84,7 @@ export const loadSavedNodes = (): CanvasNode[] => {
     }
     return node;
   });
+  return sortNodesByDepth(formatted);
 };
 export const saveNodes = (nodes: CanvasNode[]): void => setStorage(STORAGE_KEY_NODES, nodes);
 export const loadSavedEdges = (): CanvasEdge[] =>

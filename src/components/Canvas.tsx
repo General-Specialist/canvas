@@ -13,11 +13,11 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Sun, Moon, Trash, Copy, SquaresFour } from '@phosphor-icons/react';
+import { Sun, Moon, Trash, Copy, SquaresFour, Palette } from '@phosphor-icons/react';
 
 import { NoteNode } from './nodes/NoteNode';
 import { EdgeJunctionNode } from './nodes/EdgeJunctionNode';
-import { GroupNode } from './nodes/GroupNode';
+import { GroupNode, COLOR_THEMES } from './nodes/GroupNode';
 import { CustomEditableEdge } from './edges/CustomEditableEdge';
 import { useTheme } from '../context/ThemeContext';
 
@@ -34,7 +34,7 @@ import {
   getNodeAbsolutePos,
   syncAutoEdges,
   expandGroupEdges,
-  ensureGroupTitleClearance,
+  sortNodesByDepth,
   autoWrapConnectedNodeTitles,
 } from '../utils/edgeUtils';
 
@@ -81,10 +81,6 @@ const InnerCanvas: React.FC = () => {
   useEffect(() => {
     saveEdges(edges);
   }, [edges]);
-
-  useEffect(() => {
-    setNodes((prev) => ensureGroupTitleClearance(prev));
-  }, [setNodes]);
 
   const executeGroup = useCallback(
     (targetNodeIds: string[]) => {
@@ -155,7 +151,7 @@ const InnerCanvas: React.FC = () => {
           return n;
         });
 
-        const finalNodes = [newGroupNode, ...updatedNodes];
+        const finalNodes = sortNodesByDepth([newGroupNode, ...updatedNodes]);
         setEdges((eds) => syncAutoEdges(finalNodes, eds) as CanvasEdge[]);
         return finalNodes;
       });
@@ -424,6 +420,16 @@ const InnerCanvas: React.FC = () => {
     [nodes, setNodes]
   );
 
+  const handleSetGroupColor = useCallback(
+    (nodeId: string, color: string) => {
+      setNodes((nds) =>
+        nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, color } } : n))
+      );
+      setNodeMenu(null);
+    },
+    [setNodes]
+  );
+
   const handlePaneContextMenu = useCallback(
     (e: React.MouseEvent | MouseEvent) => {
       e.preventDefault();
@@ -512,46 +518,101 @@ const InnerCanvas: React.FC = () => {
         </div>
       )}
 
-      {nodeMenu && (
-        <div
-          className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-48 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
-          style={{ top: nodeMenu.y, left: nodeMenu.x }}
-        >
-          {selectedCount > 1 && (
+      {nodeMenu && (() => {
+        const targetNode = nodes.find((n) => n.id === nodeMenu.nodeId);
+        const isGroupNode = targetNode?.type === 'groupNode';
+
+        if (isGroupNode) {
+          const currentColor = (targetNode?.data as Record<string, any>)?.color || 'featherGreen';
+
+          return (
+            <div
+              className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-2 px-2 w-52 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
+              style={{ top: nodeMenu.y, left: nodeMenu.x }}
+            >
+              <div className="px-1 py-1 select-none">
+                <div className="flex items-center gap-1.5 text-[var(--text-light)] font-semibold mb-2 px-1">
+                  <Palette className="w-4 h-4 text-[var(--text-light)]" />
+                  <span>Color</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 p-1.5 bg-black/5 dark:bg-white/5 rounded-lg">
+                  {Object.entries(COLOR_THEMES).map(([cKey, t]) => (
+                    <button
+                      key={cKey}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSetGroupColor(nodeMenu.nodeId, cKey);
+                      }}
+                      className={`w-6 h-6 rounded-full border flex items-center justify-center transition-transform hover:scale-110 cursor-pointer ${
+                        t.dot
+                      } ${
+                        currentColor === cKey
+                          ? 'ring-2 ring-[var(--text-normal)] border-white shadow-sm'
+                          : 'border-black/10'
+                      }`}
+                      title={t.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="my-1.5 border-t border-[var(--border-color)]" />
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteNode(nodeMenu.nodeId);
+                }}
+                className="w-full text-left px-2.5 py-1.5 hover:bg-[#FF4B4B]/10 text-[#FF4B4B] hover:text-[#FF4B4B] font-semibold transition-colors flex items-center gap-2 rounded-lg cursor-pointer"
+              >
+                <Trash className="w-4 h-4" />
+                <span>Delete Group</span>
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-48 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
+            style={{ top: nodeMenu.y, left: nodeMenu.x }}
+          >
+            {selectedCount > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGroupSelectedNodes();
+                  setNodeMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer border-b border-[var(--border-color)]"
+              >
+                <SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />
+                <span>Group Selected</span>
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleGroupSelectedNodes();
-                setNodeMenu(null);
+                handleDuplicateNode(nodeMenu.nodeId);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer border-b border-[var(--border-color)]"
+              className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer"
             >
-              <SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />
-              <span>Group Selected</span>
+              <Copy className="w-3.5 h-3.5 text-[var(--text-light)]" />
+              <span>Duplicate Node</span>
             </button>
-          )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDuplicateNode(nodeMenu.nodeId);
-            }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Copy className="w-3.5 h-3.5 text-[var(--text-light)]" />
-            <span>Duplicate Node</span>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteNode(nodeMenu.nodeId);
-            }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[#FF4B4B]/10 text-[#FF4B4B] hover:text-[#FF4B4B] font-semibold transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Trash className="w-3.5 h-3.5" />
-            <span>Delete Node</span>
-          </button>
-        </div>
-      )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteNode(nodeMenu.nodeId);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-[#FF4B4B]/10 text-[#FF4B4B] hover:text-[#FF4B4B] font-semibold transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Trash className="w-3.5 h-3.5" />
+              <span>Delete Node</span>
+            </button>
+          </div>
+        );
+      })()}
 
       <ReactFlow
         nodes={displayNodes}

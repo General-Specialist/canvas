@@ -406,37 +406,43 @@ export function expandGroupEdges(groupIds: Set<string>, nodes: Node[], edges: Ed
   return newEdges;
 }
 
-export function ensureGroupTitleClearance<T extends Node>(nodes: T[]): T[] {
-  const REQUIRED_TOP_CLEARANCE = 140;
-  const groupNodes = nodes.filter((n) => n.type === 'groupNode');
-  if (groupNodes.length === 0) return nodes;
+export function getGroupDepth(nodeId: string, nodeMap: Map<string, Node>): number {
+  const node = nodeMap.get(nodeId);
+  if (!node || !node.parentId || !nodeMap.has(node.parentId)) return 0;
+  return 1 + getGroupDepth(node.parentId, nodeMap);
+}
 
-  let modified = false;
-  const nodeMap = new Map<string, T>(
-    nodes.map((n) => [n.id, { ...n, position: { ...n.position }, style: n.style ? { ...n.style } : undefined } as T])
-  );
+export function sortNodesByDepth<T extends Node>(nodes: T[]): T[] {
+  const nodeMap = new Map<string, T>(nodes.map((n) => [n.id, n]));
 
-  for (const group of groupNodes) {
-    const children = Array.from(nodeMap.values()).filter((n) => n.parentId === group.id);
-    if (children.length === 0) continue;
-
-    const minChildY = Math.min(...children.map((c) => c.position.y));
-    if (minChildY < REQUIRED_TOP_CLEARANCE) {
-      const diff = REQUIRED_TOP_CLEARANCE - minChildY;
-      modified = true;
-
-      const updatedGroup = nodeMap.get(group.id)!;
-      updatedGroup.position.y = Math.round(updatedGroup.position.y - diff);
-      const currentHeight = (updatedGroup.style?.height as number) || (updatedGroup.measured?.height as number) || 220;
-      updatedGroup.style = { ...updatedGroup.style, height: Math.round(currentHeight + diff) };
-
-      for (const child of children) {
-        const updatedChild = nodeMap.get(child.id)!;
-        updatedChild.position.y = Math.round(updatedChild.position.y + diff);
-      }
+  // Remove invalid parentId references if parent node no longer exists
+  const validNodes = nodes.map((n) => {
+    if (n.parentId && !nodeMap.has(n.parentId)) {
+      return { ...n, parentId: undefined };
     }
-  }
+    return n;
+  });
 
-  return modified ? (Array.from(nodeMap.values()) as T[]) : nodes;
+  const validMap = new Map<string, T>(validNodes.map((n) => [n.id, n]));
+
+  return [...validNodes].sort((a, b) => {
+    const isAGroup = a.type === 'groupNode';
+    const isBGroup = b.type === 'groupNode';
+
+    if (isAGroup && !isBGroup) return -1;
+    if (!isAGroup && isBGroup) return 1;
+
+    if (isAGroup && isBGroup) {
+      const depthA = getGroupDepth(a.id, validMap as Map<string, Node>);
+      const depthB = getGroupDepth(b.id, validMap as Map<string, Node>);
+      return depthA - depthB;
+    }
+
+    return 0;
+  });
+}
+
+export function ensureGroupTitleClearance<T extends Node>(nodes: T[]): T[] {
+  return sortNodesByDepth(nodes);
 }
 
