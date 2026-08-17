@@ -5,10 +5,11 @@ import {
   EdgeProps,
   getBezierPath,
   useReactFlow,
+  useInternalNode,
 } from '@xyflow/react';
 import { X } from '@phosphor-icons/react';
 
-import { expandGroupEdges } from '../../utils/edgeUtils';
+import { expandGroupEdges, getFloatingEdgeParams } from '../../utils/edgeUtils';
 import { CanvasEdge } from '../../types/canvas';
 
 export const CustomEditableEdge: React.FC<EdgeProps> = ({
@@ -30,6 +31,10 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
   const { setEdges, getNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
 
+  const sourceNode = useInternalNode(source);
+  const targetNode = useInternalNode(target);
+  const floatingParams = getFloatingEdgeParams(sourceNode, targetNode);
+
   const currentLabel = (data?.label as string) || (typeof label === 'string' ? label : '') || '';
   const [labelText, setLabelText] = useState(currentLabel);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -45,14 +50,16 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
     }
   }, [isEditing]);
 
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  const [edgePath, labelX, labelY] = getBezierPath(
+    floatingParams || {
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+    }
+  );
 
   const saveLabel = () => {
     setIsEditing(false);

@@ -32,8 +32,8 @@ import {
 } from '../utils/storage';
 import {
   getNodeAbsolutePos,
+  getNodeDimensions,
   syncAutoEdges,
-  optimizeNodeEdges,
   expandGroupEdges,
   sortNodesByDepth,
   autoWrapConnectedNodeTitles,
@@ -49,31 +49,40 @@ const edgeTypes = {
   customEdge: CustomEditableEdge,
 };
 
+const MenuItem: React.FC<{
+  label: string;
+  icon?: React.ReactNode;
+  onClick: (e: React.MouseEvent) => void;
+  variant?: 'danger' | 'warning' | 'default';
+  borderBottom?: boolean;
+}> = ({ label, icon, onClick, variant = 'default', borderBottom }) => {
+  const colorClass =
+    variant === 'danger'
+      ? 'text-[#FF4B4B] hover:bg-[#FF4B4B]/10 font-semibold'
+      : variant === 'warning'
+      ? 'text-[#FF9600] hover:bg-[var(--sidebar-hover-bg)]'
+      : 'text-[var(--text-normal)] hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)]';
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(e);
+      }}
+      className={`w-full text-left px-3 py-1.5 transition-colors flex items-center gap-2 cursor-pointer ${colorClass} ${
+        borderBottom ? 'border-b border-[var(--border-color)]' : ''
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+};
+
 const InnerCanvas: React.FC = () => {
-  const [nodes, setNodes, onNodesChangeBase] = useNodesState<CanvasNode>(loadSavedNodes());
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(loadSavedNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>(loadSavedEdges());
 
-  const onNodesChange = useCallback(
-    (changes: any) => {
-      onNodesChangeBase(changes);
-      const movedChanges = changes.filter((c: any) => c.type === 'position' || c.type === 'dimensions');
-      if (movedChanges.length > 0) {
-        setNodes((currentNodes) => {
-          let updated = edges;
-          movedChanges.forEach((c: any) => {
-            if (c.id) {
-              updated = optimizeNodeEdges(c.id, currentNodes, updated) as CanvasEdge[];
-            }
-          });
-          if (updated !== edges) {
-            setEdges(updated);
-          }
-          return currentNodes;
-        });
-      }
-    },
-    [onNodesChangeBase, edges, setNodes, setEdges]
-  );
   const [menu, setMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
@@ -110,10 +119,7 @@ const InnerCanvas: React.FC = () => {
 
         selectedNodes.forEach((node) => {
           const absPos = getNodeAbsolutePos(node, nodeMap);
-          const defaultW = node.type === 'noteNode' ? 260 : node.type === 'edgeJunction' ? 16 : 300;
-          const defaultH = node.type === 'noteNode' ? 100 : node.type === 'edgeJunction' ? 16 : 200;
-          const width = node.measured?.width || node.width || (node.style?.width as number) || defaultW;
-          const height = node.measured?.height || node.height || (node.style?.height as number) || defaultH;
+          const { width, height } = getNodeDimensions(node);
 
           minX = Math.min(minX, absPos.x);
           minY = Math.min(minY, absPos.y);
@@ -210,20 +216,17 @@ const InnerCanvas: React.FC = () => {
   const [toggledNodeIds, setToggledNodeIds] = useState<Set<string>>(new Set());
   const toggledNodeIdsRef = useRef<Set<string>>(new Set());
 
-  const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, node: CanvasNode) => {
-      if (isGroupModeRef.current) {
-        setToggledNodeIds((prev) => {
-          const next = new Set(prev);
-          if (next.has(node.id)) next.delete(node.id);
-          else next.add(node.id);
-          toggledNodeIdsRef.current = next;
-          return next;
-        });
-      }
-    },
-    []
-  );
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: CanvasNode) => {
+    if (isGroupModeRef.current) {
+      setToggledNodeIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(node.id)) next.delete(node.id);
+        else next.add(node.id);
+        toggledNodeIdsRef.current = next;
+        return next;
+      });
+    }
+  }, []);
 
   const handleSelectionEnd = useCallback(() => {
     if (isGroupModeRef.current) {
@@ -328,13 +331,6 @@ const InnerCanvas: React.FC = () => {
     [setNodes, setEdges]
   );
 
-  const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
-    (_event, node, allNodes) => {
-      setEdges((prevEdges) => optimizeNodeEdges(node.id, allNodes, prevEdges) as CanvasEdge[]);
-    },
-    [setEdges]
-  );
-
   const handleNodeDragStop: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
       if (draggedNode.type === 'groupNode') {
@@ -351,10 +347,7 @@ const InnerCanvas: React.FC = () => {
         if (!targetNode) return currentNodes;
 
         const absPos = getNodeAbsolutePos(targetNode, nodeMap);
-        const defaultW = targetNode.type === 'noteNode' ? 260 : targetNode.type === 'edgeJunction' ? 16 : 300;
-        const defaultH = targetNode.type === 'noteNode' ? 100 : targetNode.type === 'edgeJunction' ? 16 : 200;
-        const nodeW = targetNode.measured?.width || targetNode.width || (targetNode.style?.width as number) || defaultW;
-        const nodeH = targetNode.measured?.height || targetNode.height || (targetNode.style?.height as number) || defaultH;
+        const { width: nodeW, height: nodeH } = getNodeDimensions(targetNode);
         const nodeCenterX = absPos.x + nodeW / 2;
         const nodeCenterY = absPos.y + nodeH / 2;
 
@@ -363,8 +356,7 @@ const InnerCanvas: React.FC = () => {
         let containingGroup: CanvasNode | null = null;
         for (const group of groupNodes) {
           const groupAbsPos = getNodeAbsolutePos(group, nodeMap);
-          const groupW = group.measured?.width || group.width || (group.style?.width as number) || 400;
-          const groupH = group.measured?.height || group.height || (group.style?.height as number) || 280;
+          const { width: groupW, height: groupH } = getNodeDimensions(group);
 
           if (
             nodeCenterX >= groupAbsPos.x &&
@@ -377,80 +369,48 @@ const InnerCanvas: React.FC = () => {
           }
         }
 
+        const isInsideParent = (parent: CanvasNode) => {
+          const pAbs = getNodeAbsolutePos(parent, nodeMap);
+          const { width: pW, height: pH } = getNodeDimensions(parent);
+          return (
+            nodeCenterX >= pAbs.x &&
+            nodeCenterX <= pAbs.x + pW &&
+            nodeCenterY >= pAbs.y &&
+            nodeCenterY <= pAbs.y + pH
+          );
+        };
+
+        let nextParentId: string | undefined = targetNode.parentId;
+
         if (targetNode.parentId) {
           const currentParent = groupNodes.find((g) => g.id === targetNode.parentId);
-          let stillInCurrentParent = false;
-
-          if (currentParent) {
-            const parentAbsPos = getNodeAbsolutePos(currentParent, nodeMap);
-            const parentW = currentParent.measured?.width || currentParent.width || (currentParent.style?.width as number) || 400;
-            const parentH = currentParent.measured?.height || currentParent.height || (currentParent.style?.height as number) || 280;
-
-            stillInCurrentParent =
-              nodeCenterX >= parentAbsPos.x &&
-              nodeCenterX <= parentAbsPos.x + parentW &&
-              nodeCenterY >= parentAbsPos.y &&
-              nodeCenterY <= parentAbsPos.y + parentH;
+          if (!currentParent || !isInsideParent(currentParent)) {
+            nextParentId = containingGroup?.id;
           }
+        } else if (containingGroup) {
+          nextParentId = containingGroup.id;
+        }
 
-          if (!stillInCurrentParent) {
-            if (containingGroup) {
-              const newGroupAbsPos = getNodeAbsolutePos(containingGroup, nodeMap);
-              const updatedNodes = currentNodes.map((n) => {
-                if (n.id === targetNode.id) {
-                  return {
-                    ...n,
-                    parentId: containingGroup!.id,
-                    position: {
-                      x: Math.round(absPos.x - newGroupAbsPos.x),
-                      y: Math.round(absPos.y - newGroupAbsPos.y),
-                    },
-                  };
-                }
-                return n;
-              });
-              const sorted = sortNodesByDepth(updatedNodes);
-              setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
-              return sorted;
-            } else {
-              const updatedNodes = currentNodes.map((n) => {
-                if (n.id === targetNode.id) {
-                  return {
-                    ...n,
-                    parentId: undefined,
-                    position: {
-                      x: Math.round(absPos.x),
-                      y: Math.round(absPos.y),
-                    },
-                  };
-                }
-                return n;
-              });
-              const sorted = sortNodesByDepth(updatedNodes);
-              setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
-              return sorted;
+        if (nextParentId !== targetNode.parentId) {
+          const nextParent = nextParentId ? groupNodes.find((g) => g.id === nextParentId) : undefined;
+          const nextParentPos = nextParent ? getNodeAbsolutePos(nextParent, nodeMap) : { x: 0, y: 0 };
+
+          const updatedNodes = currentNodes.map((n) => {
+            if (n.id === targetNode.id) {
+              return {
+                ...n,
+                parentId: nextParentId,
+                position: nextParentId
+                  ? { x: Math.round(absPos.x - nextParentPos.x), y: Math.round(absPos.y - nextParentPos.y) }
+                  : { x: Math.round(absPos.x), y: Math.round(absPos.y) },
+              };
             }
-          }
-        } else {
-          if (containingGroup) {
-            const newGroupAbsPos = getNodeAbsolutePos(containingGroup, nodeMap);
-            const updatedNodes = currentNodes.map((n) => {
-              if (n.id === targetNode.id) {
-                return {
-                  ...n,
-                  parentId: containingGroup!.id,
-                  position: {
-                    x: Math.round(absPos.x - newGroupAbsPos.x),
-                    y: Math.round(absPos.y - newGroupAbsPos.y),
-                  },
-                };
-              }
-              return n;
-            });
-            const sorted = sortNodesByDepth(updatedNodes);
-            setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
-            return sorted;
-          }
+            return n;
+          });
+
+          const sorted = sortNodesByDepth(updatedNodes);
+          setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
+          return sorted;
         }
 
         setEdges((eds) => syncAutoEdges(currentNodes, eds) as CanvasEdge[]);
@@ -484,13 +444,6 @@ const InnerCanvas: React.FC = () => {
     },
     [nodes, setNodes, setEdges]
   );
-
-  useEffect(() => {
-    setNodes((currentNodes) => {
-      const { updatedNodes, modified } = autoWrapConnectedNodeTitles(currentNodes, edges);
-      return modified ? updatedNodes : currentNodes;
-    });
-  }, [edges, setNodes]);
 
   const handleAddNote = useCallback(
     (position?: { x: number; y: number }) => {
@@ -651,34 +604,27 @@ const InnerCanvas: React.FC = () => {
         </button>
       </div>
 
-
       {menu && (
         <div
           className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-48 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
           style={{ top: menu.y, left: menu.x }}
         >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
+          <MenuItem
+            label="+ Add Note"
+            onClick={() => {
               handleAddNote(menu.flowPosition);
               setMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors cursor-pointer"
-          >
-            + Add Note
-          </button>
+          />
           {selectedCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
+            <MenuItem
+              label="Group Selected"
+              icon={<SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />}
+              onClick={() => {
                 handleGroupSelectedNodes();
                 setMenu(null);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />
-              <span>Group Selected</span>
-            </button>
+            />
           )}
         </div>
       )}
@@ -723,16 +669,12 @@ const InnerCanvas: React.FC = () => {
 
               <div className="my-1.5 border-t border-[var(--border-color)]" />
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteNode(nodeMenu.nodeId);
-                }}
-                className="w-full text-left px-2.5 py-1.5 hover:bg-[#FF4B4B]/10 text-[#FF4B4B] hover:text-[#FF4B4B] font-semibold transition-colors flex items-center gap-2 rounded-lg cursor-pointer"
-              >
-                <Trash className="w-4 h-4" />
-                <span>Delete Group</span>
-              </button>
+              <MenuItem
+                label="Delete Group"
+                variant="danger"
+                icon={<Trash className="w-4 h-4" />}
+                onClick={() => handleDeleteNode(nodeMenu.nodeId)}
+              />
             </div>
           );
         }
@@ -743,51 +685,39 @@ const InnerCanvas: React.FC = () => {
             style={{ top: nodeMenu.y, left: nodeMenu.x }}
           >
             {targetNode?.parentId && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
+              <MenuItem
+                label="Remove from Group"
+                variant="warning"
+                borderBottom
+                icon={<SquaresFour className="w-3.5 h-3.5" />}
+                onClick={() => {
                   handleRemoveNodeFromGroup(nodeMenu.nodeId);
                   setNodeMenu(null);
                 }}
-                className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer border-b border-[var(--border-color)] text-[#FF9600]"
-              >
-                <SquaresFour className="w-3.5 h-3.5" />
-                <span>Remove from Group</span>
-              </button>
+              />
             )}
             {selectedCount > 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
+              <MenuItem
+                label="Group Selected"
+                borderBottom
+                icon={<SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />}
+                onClick={() => {
                   handleGroupSelectedNodes();
                   setNodeMenu(null);
                 }}
-                className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer border-b border-[var(--border-color)]"
-              >
-                <SquaresFour className="w-3.5 h-3.5 text-[#58CC02]" />
-                <span>Group Selected</span>
-              </button>
+              />
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDuplicateNode(nodeMenu.nodeId);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <Copy className="w-3.5 h-3.5 text-[var(--text-light)]" />
-              <span>Duplicate Node</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteNode(nodeMenu.nodeId);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-[#FF4B4B]/10 text-[#FF4B4B] hover:text-[#FF4B4B] font-semibold transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <Trash className="w-3.5 h-3.5" />
-              <span>Delete Node</span>
-            </button>
+            <MenuItem
+              label="Duplicate Node"
+              icon={<Copy className="w-3.5 h-3.5 text-[var(--text-light)]" />}
+              onClick={() => handleDuplicateNode(nodeMenu.nodeId)}
+            />
+            <MenuItem
+              label="Delete Node"
+              variant="danger"
+              icon={<Trash className="w-3.5 h-3.5" />}
+              onClick={() => handleDeleteNode(nodeMenu.nodeId)}
+            />
           </div>
         );
       })()}
@@ -799,7 +729,6 @@ const InnerCanvas: React.FC = () => {
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onNodeClick={handleNodeClick}
-        onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         onNodeContextMenu={handleNodeContextMenu}
         onNodesDelete={handleNodesDelete}
@@ -833,4 +762,3 @@ export const Canvas: React.FC = () => {
     </ReactFlowProvider>
   );
 };
-

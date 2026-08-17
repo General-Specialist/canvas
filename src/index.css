@@ -90,6 +90,10 @@
     user-select: none;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
+
+  textarea {
+    field-sizing: content;
+  }
 }
 
 /* React Flow Custom Overrides using strictly defined theme variables */

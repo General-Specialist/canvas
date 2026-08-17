@@ -49,97 +49,35 @@ const KaTeXRenderer: React.FC<{ math: string; displayMode: boolean }> = React.me
 
 KaTeXRenderer.displayName = 'KaTeXRenderer';
 
+const TOKEN_REGEX = /(\$\$(?:[\s\S]+?)\$\$|\\\[(?:[\s\S]+?)\\\]|\\\((?:[\s\S]+?)\\\)|\$(?:[^\s\$]|(?:[^\s\$](?:\\\$|[^\$\n])*?[^\s\$]))\$|\[\[(?:.*?)\]\])/g;
+
 export function parseWikilinks(text: string): WikilinkSegment[] {
   if (!text) return [];
 
-  const patterns = [
-    // Double line LaTeX (Display math $$ ... $$)
-    { type: 'math-display', regex: /\$\$([\s\S]+?)\$\$/g },
-    // Double line LaTeX (Display math \[ ... \])
-    { type: 'math-display', regex: /\\\[([\s\S]+?)\\\]/g },
-    // Single line LaTeX (Inline math \( ... \))
-    { type: 'math-inline', regex: /\\\(([\s\S]+?)\\\)/g },
-    // Wikilinks [[ ... ]]
-    { type: 'wikilink', regex: /\[\[(.*?)\]\]/g },
-    // Single line LaTeX (Inline math $ ... $)
-    { type: 'math-inline', regex: /\$([^\s\$]|(?:[^\s\$](?:\\\$|[^\$\n])*?[^\s\$]))\$/g },
-  ];
-
-  const result: WikilinkSegment[] = [];
-  let currentIndex = 0;
-
-  while (currentIndex < text.length) {
-    let earliestMatch: {
-      type: 'wikilink' | 'math-inline' | 'math-display';
-      index: number;
-      length: number;
-      content: string;
-      raw: string;
-      target?: string;
-    } | null = null;
-
-    for (const p of patterns) {
-      p.regex.lastIndex = currentIndex;
-      const match = p.regex.exec(text);
-      if (match && match.index >= currentIndex) {
-        if (
-          !earliestMatch ||
-          match.index < earliestMatch.index ||
-          (match.index === earliestMatch.index && match[0].length > earliestMatch.length)
-        ) {
-          if (p.type === 'wikilink') {
-            const rawInner = match[1];
-            let target = rawInner.trim();
-            let display = target;
-            if (target.includes('|')) {
-              const parts = target.split('|');
-              target = parts[0].trim();
-              display = parts.slice(1).join('|').trim();
-            }
-            earliestMatch = {
-              type: p.type as 'wikilink',
-              index: match.index,
-              length: match[0].length,
-              content: display || target || '[[]]',
-              raw: match[0],
-              target: target || undefined,
-            };
-          } else {
-            earliestMatch = {
-              type: p.type as 'math-inline' | 'math-display',
-              index: match.index,
-              length: match[0].length,
-              content: match[1],
-              raw: match[0],
-            };
-          }
-        }
+  return text
+    .split(TOKEN_REGEX)
+    .filter(Boolean)
+    .map((token) => {
+      if (token.startsWith('$$') || token.startsWith('\\[')) {
+        return { type: 'math-display', content: token.slice(2, -2).trim() };
       }
-    }
-
-    if (!earliestMatch) {
-      result.push({ type: 'text', content: text.slice(currentIndex) });
-      break;
-    }
-
-    if (earliestMatch.index > currentIndex) {
-      result.push({ type: 'text', content: text.slice(currentIndex, earliestMatch.index) });
-    }
-
-    if (earliestMatch.type === 'wikilink' && !earliestMatch.target) {
-      result.push({ type: 'text', content: '[[]]' });
-    } else {
-      result.push({
-        type: earliestMatch.type,
-        content: earliestMatch.content,
-        target: earliestMatch.target,
-      });
-    }
-
-    currentIndex = earliestMatch.index + earliestMatch.length;
-  }
-
-  return result;
+      if (token.startsWith('$') || token.startsWith('\\(')) {
+        const content = token.startsWith('\\(') ? token.slice(2, -2) : token.slice(1, -1);
+        return { type: 'math-inline', content: content.trim() };
+      }
+      if (token.startsWith('[[')) {
+        const inner = token.slice(2, -2).trim();
+        const [target, ...display] = inner.split('|');
+        const targetTrimmed = target.trim();
+        const displayTrimmed = display.join('|').trim();
+        return {
+          type: 'wikilink',
+          content: displayTrimmed || targetTrimmed || '[[]]',
+          target: targetTrimmed || undefined,
+        };
+      }
+      return { type: 'text', content: token };
+    });
 }
 
 export const WikilinkText: React.FC<WikilinkTextProps> = ({

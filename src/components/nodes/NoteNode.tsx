@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useRef, memo } from 'react';
+import React, { useState, memo } from 'react';
 import { NodeProps, useReactFlow, NodeResizer, useNodesData } from '@xyflow/react';
 import { NoteNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
@@ -20,25 +20,6 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
-
-  const titleRef = useRef<HTMLTextAreaElement>(null);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
-
-  useLayoutEffect(() => {
-    if (isEditingTitle && titleRef.current) {
-      titleRef.current.focus();
-      titleRef.current.style.height = 'auto';
-      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
-    }
-  }, [titleText, isEditingTitle]);
-
-  useLayoutEffect(() => {
-    if (isEditingContent && contentRef.current) {
-      contentRef.current.focus();
-      contentRef.current.style.height = 'auto';
-      contentRef.current.style.height = `${contentRef.current.scrollHeight}px`;
-    }
-  }, [contentText, isEditingContent]);
 
   const updateNodeData = (updates: Partial<NoteNodeData>) => {
     setNodes((nds) => {
@@ -82,7 +63,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       {/* Title Field */}
       {isEditingTitle ? (
         <textarea
-          ref={titleRef}
+          autoFocus
           rows={1}
           value={titleText}
           onChange={(e) => updateNodeData({ title: e.target.value })}
@@ -115,7 +96,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
       {/* Content Field */}
       {isEditingContent ? (
         <textarea
-          ref={contentRef}
+          autoFocus
           rows={1}
           value={contentText}
           onChange={(e) => updateNodeData({ content: e.target.value })}

@@ -92,15 +92,24 @@ export function autoWrapConnectedNodeTitles(
   };
 }
 
-interface HandlePosition {
-  x: number;
-  y: number;
-  position: Position;
-  id: string;
-}
+export function getNodeDimensions(node: Node): { width: number; height: number } {
+  const isJunction = node.type === 'edgeJunction';
+  const styleWidth = typeof node.style?.width === 'number' ? node.style.width : parseFloat(String(node.style?.width || ''));
+  const styleHeight = typeof node.style?.height === 'number' ? node.style.height : parseFloat(String(node.style?.height || ''));
 
-const NODE_DEFAULT_WIDTH = 300;
-const NODE_DEFAULT_HEIGHT = 200;
+  const width =
+    node.measured?.width ||
+    node.width ||
+    (!isNaN(styleWidth) && styleWidth > 0 ? styleWidth : 0) ||
+    (isJunction ? 16 : node.type === 'noteNode' ? 260 : 300);
+  const height =
+    node.measured?.height ||
+    node.height ||
+    (!isNaN(styleHeight) && styleHeight > 0 ? styleHeight : 0) ||
+    (isJunction ? 16 : node.type === 'noteNode' ? 100 : 200);
+
+  return { width, height };
+}
 
 export function getNodeAbsolutePos(
   node: Node,
@@ -120,124 +129,58 @@ export function getNodeAbsolutePos(
   };
 }
 
-function getNodeSideMidpoints(
-  node: Node,
-  nodeMap?: Map<string, Node>
-): Record<string, HandlePosition> {
-  const isJunction = node.type === 'edgeJunction';
-  const styleWidth = typeof node.style?.width === 'number' ? node.style.width : parseFloat(String(node.style?.width || ''));
-  const styleHeight = typeof node.style?.height === 'number' ? node.style.height : parseFloat(String(node.style?.height || ''));
+export function getFloatingEdgeParams(sourceNode?: any, targetNode?: any) {
+  if (!sourceNode || !targetNode) return null;
 
-  const width =
-    node.measured?.width ||
-    node.width ||
-    (!isNaN(styleWidth) && styleWidth > 0 ? styleWidth : 0) ||
-    (isJunction ? 16 : node.type === 'noteNode' ? 260 : NODE_DEFAULT_WIDTH);
-  const height =
-    node.measured?.height ||
-    node.height ||
-    (!isNaN(styleHeight) && styleHeight > 0 ? styleHeight : 0) ||
-    (isJunction ? 16 : node.type === 'noteNode' ? 100 : NODE_DEFAULT_HEIGHT);
-  const { x, y } = getNodeAbsolutePos(node, nodeMap);
+  const srcPos = sourceNode.internals?.positionAbsolute || sourceNode.position;
+  const tgtPos = targetNode.internals?.positionAbsolute || targetNode.position;
+  if (!srcPos || !tgtPos) return null;
 
-  return {
-    top: { x: x + width / 2, y, position: Position.Top, id: 'top' },
-    right: { x: x + width, y: y + height / 2, position: Position.Right, id: 'right' },
-    bottom: { x: x + width / 2, y: y + height, position: Position.Bottom, id: 'bottom' },
-    left: { x, y: y + height / 2, position: Position.Left, id: 'left' },
+  const srcDim = getNodeDimensions(sourceNode);
+  const tgtDim = getNodeDimensions(targetNode);
+
+  const srcPoints = {
+    top: { x: srcPos.x + srcDim.width / 2, y: srcPos.y, position: Position.Top },
+    right: { x: srcPos.x + srcDim.width, y: srcPos.y + srcDim.height / 2, position: Position.Right },
+    bottom: { x: srcPos.x + srcDim.width / 2, y: srcPos.y + srcDim.height, position: Position.Bottom },
+    left: { x: srcPos.x, y: srcPos.y + srcDim.height / 2, position: Position.Left },
   };
-}
 
-function getOptimalHandles(
-  sourceNode: Node,
-  targetNode: Node,
-  nodeMap?: Map<string, Node>
-): { sourceHandle: string; targetHandle: string } {
-  const sourceSides = getNodeSideMidpoints(sourceNode, nodeMap);
-  const targetSides = getNodeSideMidpoints(targetNode, nodeMap);
+  const tgtPoints = {
+    top: { x: tgtPos.x + tgtDim.width / 2, y: tgtPos.y, position: Position.Top },
+    right: { x: tgtPos.x + tgtDim.width, y: tgtPos.y + tgtDim.height / 2, position: Position.Right },
+    bottom: { x: tgtPos.x + tgtDim.width / 2, y: tgtPos.y + tgtDim.height, position: Position.Bottom },
+    left: { x: tgtPos.x, y: tgtPos.y + tgtDim.height / 2, position: Position.Left },
+  };
 
   let minDistance = Infinity;
-  let bestSourceHandle = 'right';
-  let bestTargetHandle = 'left';
+  let bestSrc = srcPoints.right;
+  let bestTgt = tgtPoints.left;
 
-  const sideKeys = ['top', 'right', 'bottom', 'left'];
-
-  for (const sKey of sideKeys) {
-    const sPt = sourceSides[sKey];
-    for (const tKey of sideKeys) {
-      const tPt = targetSides[tKey];
-      const dist = Math.hypot(sPt.x - tPt.x, sPt.y - tPt.y);
-
+  for (const sKey of Object.keys(srcPoints) as (keyof typeof srcPoints)[]) {
+    const s = srcPoints[sKey];
+    for (const tKey of Object.keys(tgtPoints) as (keyof typeof tgtPoints)[]) {
+      const t = tgtPoints[tKey];
+      const dist = Math.hypot(s.x - t.x, s.y - t.y);
       if (dist < minDistance) {
         minDistance = dist;
-        bestSourceHandle = sKey;
-        bestTargetHandle = tKey;
+        bestSrc = s;
+        bestTgt = t;
       }
     }
   }
 
   return {
-    sourceHandle: bestSourceHandle,
-    targetHandle: bestTargetHandle,
+    sourceX: bestSrc.x,
+    sourceY: bestSrc.y,
+    sourcePosition: bestSrc.position,
+    targetX: bestTgt.x,
+    targetY: bestTgt.y,
+    targetPosition: bestTgt.position,
   };
 }
 
-export function optimizeAllEdges(nodes: Node[], edges: Edge[]): Edge[] {
-  const nodeMap = new Map<string, Node>(nodes.map((n) => [n.id, n]));
-
-  return edges.map((edge) => {
-    const sourceNode = nodeMap.get(edge.source);
-    const targetNode = nodeMap.get(edge.target);
-
-    if (!sourceNode || !targetNode) return edge;
-
-    const { sourceHandle, targetHandle } = getOptimalHandles(sourceNode, targetNode, nodeMap);
-
-    if (edge.sourceHandle === sourceHandle && edge.targetHandle === targetHandle) {
-      return edge;
-    }
-
-    return { ...edge, sourceHandle, targetHandle };
-  });
-}
-
-export function optimizeNodeEdges(nodeId: string, nodes: Node[], edges: Edge[]): Edge[] {
-  const nodeMap = new Map<string, Node>(nodes.map((n) => [n.id, n]));
-  const targetNode = nodeMap.get(nodeId);
-  if (!targetNode) return edges;
-
-  const affectedIds = new Set<string>([nodeId]);
-  if (targetNode.type === 'groupNode') {
-    nodes.forEach((n) => {
-      if (n.parentId === nodeId) affectedIds.add(n.id);
-    });
-  }
-
-  let modified = false;
-  const nextEdges = edges.map((edge) => {
-    if (!affectedIds.has(edge.source) && !affectedIds.has(edge.target)) {
-      return edge;
-    }
-
-    const sourceNode = nodeMap.get(edge.source);
-    const targetNode = nodeMap.get(edge.target);
-    if (!sourceNode || !targetNode) return edge;
-
-    const { sourceHandle, targetHandle } = getOptimalHandles(sourceNode, targetNode, nodeMap);
-
-    if (edge.sourceHandle === sourceHandle && edge.targetHandle === targetHandle) {
-      return edge;
-    }
-
-    modified = true;
-    return { ...edge, sourceHandle, targetHandle };
-  });
-
-  return modified ? nextEdges : edges;
-}
-
 export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
-  // 1. Map each groupNode to its set of child node IDs
   const nodeMap = new Map<string, Node>(nodes.map((n) => [n.id, n]));
   const groupChildrenMap = new Map<string, Set<string>>();
   nodes.forEach((n) => {
@@ -247,7 +190,6 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     }
   });
 
-  // 2. Collect base edges (only manual/persistent edges; exclude auto wiki-links and group auto-edges so stale ones disappear)
   const baseEdges: Edge[] = [];
   const baseEdgeKeySet = new Set<string>();
 
@@ -271,7 +213,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     }
   });
 
-  // 3. Scan for Wiki-Links
+  // Scan for Wiki-Links
   const titleToNodeIdsMap = new Map<string, string[]>();
   nodes.forEach((n) => {
     const addKey = (k?: string) => {
@@ -325,7 +267,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     }
   });
 
-  // 4. Calculate Group Auto-Edges
+  // Calculate Group Auto-Edges
   const groupNodes = nodes.filter((n) => n.type === 'groupNode');
   const requiredGroupEdgeMap = new Map<string, { source: string; target: string; childEdges: Edge[] }>();
 
@@ -341,7 +283,6 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
       const relevantChildren = childIds.filter((cid) => cid !== targetId);
       if (relevantChildren.length === 0) return;
 
-      // Outgoing check: Group G -> Node X
       const outgoingEdges: Edge[] = [];
       const outgoingChildren = new Set<string>();
       baseEdges.forEach((e) => {
@@ -359,7 +300,6 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
         });
       }
 
-      // Incoming check: Node X -> Group G
       const incomingEdges: Edge[] = [];
       const incomingChildren = new Set<string>();
       baseEdges.forEach((e) => {
@@ -384,7 +324,6 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     return requiredGroupEdgeMap.has(pairKey) || edges.some((e) => e.source === sourceId && e.target === targetId);
   };
 
-  // 5. Reconcile and filter edges
   const nextEdges: Edge[] = [];
 
   baseEdges.forEach((edge) => {
@@ -412,10 +351,8 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     });
   });
 
-  return optimizeAllEdges(nodes, nextEdges);
+  return nextEdges;
 }
-
-export const consolidateGroupEdges = syncAutoEdges;
 
 export function expandGroupEdges(groupIds: Set<string>, nodes: Node[], edges: Edge[]): Edge[] {
   let newEdges = [...edges];
@@ -461,7 +398,6 @@ export function getGroupDepth(nodeId: string, nodeMap: Map<string, Node>): numbe
 export function sortNodesByDepth<T extends Node>(nodes: T[]): T[] {
   const nodeMap = new Map<string, T>(nodes.map((n) => [n.id, n]));
 
-  // Remove invalid parentId references if parent node no longer exists
   const validNodes = nodes.map((n) => {
     if (n.parentId && !nodeMap.has(n.parentId)) {
       return { ...n, parentId: undefined };
@@ -487,8 +423,3 @@ export function sortNodesByDepth<T extends Node>(nodes: T[]): T[] {
     return 0;
   });
 }
-
-export function ensureGroupTitleClearance<T extends Node>(nodes: T[]): T[] {
-  return sortNodesByDepth(nodes);
-}
-

@@ -1,4 +1,4 @@
-import React, { useState, memo, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
 import { GroupNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
@@ -84,17 +84,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
 
   const titleText = groupData.title || '';
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-
-  const titleRef = useRef<HTMLTextAreaElement>(null);
   const themeStyles = getGroupTheme(groupData.color);
-
-  useLayoutEffect(() => {
-    if (isEditingTitle && titleRef.current) {
-      titleRef.current.focus();
-      titleRef.current.style.height = 'auto';
-      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
-    }
-  }, [titleText, isEditingTitle]);
 
   const updateGroupData = useCallback(
     (updates: Partial<GroupNodeData>) => {
@@ -129,7 +119,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {isEditingTitle ? (
             <textarea
-              ref={titleRef}
+              autoFocus
               rows={1}
               value={titleText}
               onChange={(e) => updateGroupData({ title: e.target.value })}
