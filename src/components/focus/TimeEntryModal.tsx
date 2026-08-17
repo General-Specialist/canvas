@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Trash, Play, Clock, Check } from '@phosphor-icons/react';
 import { useFocus } from '../../context/FocusContext';
 import { FocusSession } from '../../types/focus';
+import { formatLocalDateInput } from '../../utils/calendarUtils';
 
 interface TimeEntryModalProps {
   isOpen: boolean;
@@ -20,7 +21,6 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
 }) => {
   const { tags, addManualSession, updateSession, deleteSession, restartSession } = useFocus();
 
-  const [taskTitle, setTaskTitle] = useState('');
   const [tagId, setTagId] = useState(tags[0]?.id || 'tag-coding');
   const [dateStr, setDateStr] = useState('');
   const [startTimeStr, setStartTimeStr] = useState('09:00');
@@ -28,11 +28,10 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
 
   useEffect(() => {
     if (session) {
-      setTaskTitle(session.taskTitle);
       setTagId(session.tagId);
       const start = new Date(session.startedAt);
       const end = new Date(session.endedAt);
-      setDateStr(start.toISOString().split('T')[0]);
+      setDateStr(formatLocalDateInput(start));
       setStartTimeStr(
         `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
       );
@@ -40,10 +39,9 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
         `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
       );
     } else {
-      setTaskTitle('');
       setTagId(tags[0]?.id || 'tag-coding');
       const targetDate = defaultDate || new Date();
-      setDateStr(targetDate.toISOString().split('T')[0]);
+      setDateStr(formatLocalDateInput(targetDate));
       const hour = Math.min(23, Math.max(0, Math.floor(defaultStartHour)));
       const nextHour = Math.min(23, hour + 1);
       setStartTimeStr(`${String(hour).padStart(2, '0')}:00`);
@@ -73,14 +71,12 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
 
     if (session) {
       updateSession(session.id, {
-        taskTitle: taskTitle.trim() || undefined,
         tagId,
         startedAt,
         endedAt,
       });
     } else {
       addManualSession({
-        taskTitle,
         tagId,
         startedAt,
         endedAt,
@@ -114,20 +110,6 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          {/* Task Title */}
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-light)] mb-1 block">
-              What did you work on?
-            </label>
-            <input
-              type="text"
-              value={taskTitle}
-              onChange={(e) => setTaskTitle(e.target.value)}
-              placeholder="Task or activity title..."
-              autoFocus
-              className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-normal)] placeholder:text-[var(--text-light)]/50 focus:outline-none focus:border-[#58CC02] transition-colors"
-            />
-          </div>
 
           {/* Tag Selector */}
           <div>

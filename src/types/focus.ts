@@ -12,7 +12,7 @@ export interface FocusSession {
   tagId: string;
   tagName: string;
   tagColor: string;
-  taskTitle: string;
+  taskTitle?: string;
   durationSeconds: number;
   mode: FocusTimerMode;
   startedAt: number;

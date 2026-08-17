@@ -2,10 +2,17 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   CaretLeft,
   CaretRight,
+  CaretDown,
   Clock,
   CalendarBlank,
   Columns,
   ChartPieSlice,
+  Play,
+  Pause,
+  Stop,
+  ArrowCounterClockwise,
+  Check,
+  Tag as TagIcon,
 } from '@phosphor-icons/react';
 import { useFocus } from '../../context/FocusContext';
 import { FocusSession } from '../../types/focus';
@@ -22,6 +29,7 @@ import {
 } from '../../utils/calendarUtils';
 import { TimeEntryModal } from './TimeEntryModal';
 import { TagDistributionCard } from './TagDistributionCard';
+import { TagManagerModal } from './TagManagerModal';
 
 const START_HOUR = 7; // 7 AM
 const END_HOUR = 24; // 12 AM (Midnight)
@@ -33,11 +41,31 @@ const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 type ViewMode = 'month' | 'week' | 'day';
 
 export const FocusCalendarView: React.FC = () => {
-  const { sessions, isRunning, elapsedSeconds, selectedTag, taskTitle } = useFocus();
+  const {
+    tags,
+    selectedTagId,
+    setSelectedTagId,
+    selectedTag,
+    sessions,
+    elapsedSeconds,
+    isRunning,
+    isPaused,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+    finishSession,
+  } = useFocus();
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [showSummary, setShowSummary] = useState<boolean>(false);
+
+  // Timer & Tag Dropdown state
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Time Entry Modal state
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
@@ -46,6 +74,55 @@ export const FocusCalendarView: React.FC = () => {
   const [modalDefaultHour, setModalDefaultHour] = useState<number>(9);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
+  // Spacebar to toggle Play/Pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement;
+      if (e.code === 'Space' && !isInput) {
+        e.preventDefault();
+        if (isRunning && !isPaused) {
+          pauseTimer();
+        } else if (isRunning && isPaused) {
+          resumeTimer();
+        } else {
+          startTimer();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isRunning, isPaused, startTimer, pauseTimer, resumeTimer]);
+
+  const formatTime = (secs: number) => {
+    const hrs = Math.floor(secs / 3600);
+    const mins = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (hrs > 0) {
+      return `${hrs}:${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  const activeColor = selectedTag?.color || '#58CC02';
+
+  const filteredTags = tags.filter((t) =>
+    t.name.toLowerCase().includes(tagSearch.toLowerCase().trim())
+  );
 
   // Auto-scroll to current work hour or default to 8 AM on mount
   useEffect(() => {
@@ -144,12 +221,14 @@ export const FocusCalendarView: React.FC = () => {
 
   return (
     <div className="w-full flex flex-col gap-4">
+      <TagManagerModal isOpen={isTagModalOpen} onClose={() => setIsTagModalOpen(false)} />
+
       {/* Unified Single Calendar Box */}
       <div className="w-full border border-[var(--border-color)] rounded-xl overflow-hidden flex flex-col">
-        {/* Integrated Top Calendar Header */}
+        {/* Integrated Top Calendar & Timer Header */}
         <div className="p-3 sm:p-4 border-b border-[var(--border-color)] flex items-center justify-between gap-3 flex-wrap">
-          {/* Left: Date Title */}
-          <div className="flex items-center gap-2">
+          {/* Left: Date Title & Calendar Navigation */}
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h2 className="text-sm sm:text-base font-bold text-[var(--text-hover)]">
               {viewMode === 'month'
                 ? formatMonthHeader(currentDate)
@@ -157,12 +236,188 @@ export const FocusCalendarView: React.FC = () => {
                 ? formatWeekRangeHeader(weekDays)
                 : formatDayHeader(currentDate)}
             </h2>
+
+            {/* Prev / Today / Next Navigation */}
+            <div className="flex items-center border border-[var(--border-color)] rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] transition-colors cursor-pointer"
+                title="Previous"
+              >
+                <CaretLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentDate(new Date())}
+                className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                  isToday(currentDate)
+                    ? 'text-[#58CC02] font-bold'
+                    : 'text-[var(--text-light)] hover:text-[var(--text-normal)]'
+                }`}
+                title="Jump to Today"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] transition-colors cursor-pointer"
+                title="Next"
+              >
+                <CaretRight size={14} />
+              </button>
+            </div>
           </div>
 
-          {/* Right: Duration, Summary Toggle, View Switcher, < > Nav Arrows */}
+          {/* Right: Tag Selector, Timer, Controls & Calendar Tools */}
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap ml-auto">
+            {/* Tag Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border-color)] text-[var(--text-normal)] hover:text-[var(--text-hover)] bg-[var(--sidebar-bg)] hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer"
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: activeColor }}
+                />
+                <span className="truncate max-w-[100px] sm:max-w-[130px]">
+                  #{selectedTag?.name || 'Tag'}
+                </span>
+                <CaretDown
+                  size={12}
+                  className={`text-[var(--text-light)] transition-transform duration-200 ${
+                    isDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-56 bg-[var(--canvas-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1.5 z-50 animate-fadeIn">
+                  {tags.length > 4 && (
+                    <div className="px-2 py-1">
+                      <input
+                        type="text"
+                        value={tagSearch}
+                        onChange={(e) => setTagSearch(e.target.value)}
+                        placeholder="Filter tags..."
+                        className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-2.5 py-1 text-xs text-[var(--text-normal)] placeholder:text-[var(--text-light)]/50 focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+
+                  <div className="max-h-52 overflow-y-auto px-1 py-1 space-y-0.5">
+                    {filteredTags.map((tag) => {
+                      const isSelected = tag.id === selectedTagId;
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTagId(tag.id);
+                            setIsDropdownOpen(false);
+                            setTagSearch('');
+                          }}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'text-[var(--text-hover)] font-bold border border-[var(--border-color)]'
+                              : 'text-[var(--text-normal)] hover:text-[var(--text-hover)]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: tag.color }}
+                            />
+                            <span className="truncate">#{tag.name}</span>
+                          </div>
+                          {isSelected && (
+                            <Check size={14} className="text-[var(--text-hover)] shrink-0" weight="bold" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="my-1 border-t border-[var(--border-color)]" />
+
+                  <div className="px-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsTagModalOpen(true);
+                        setIsDropdownOpen(false);
+                        setTagSearch('');
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-[var(--text-light)] hover:text-[var(--text-hover)] transition-colors cursor-pointer"
+                    >
+                      <TagIcon size={13} weight="bold" />
+                      <span>Manage Tags</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Stopwatch Time Display */}
+            <div className="font-mono text-xs sm:text-sm font-bold text-[var(--text-hover)] min-w-[46px] sm:min-w-[54px] text-right tabular-nums">
+              {formatTime(elapsedSeconds)}
+            </div>
+
+            {/* Play / Pause / Stop / Start Controls */}
+            <div className="flex items-center gap-1">
+              {isRunning && (
+                <>
+                  <button
+                    type="button"
+                    onClick={isPaused ? resumeTimer : pauseTimer}
+                    title={isPaused ? 'Resume' : 'Pause'}
+                    className="p-1.5 rounded-lg border border-[var(--border-color)] text-[var(--text-light)] hover:text-[var(--text-hover)] transition-colors cursor-pointer"
+                  >
+                    {isPaused ? <Play size={13} weight="fill" /> : <Pause size={13} weight="fill" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetTimer}
+                    title="Reset Stopwatch"
+                    className="p-1.5 rounded-lg border border-[var(--border-color)] text-[var(--text-light)] hover:text-[var(--text-hover)] transition-colors cursor-pointer"
+                  >
+                    <ArrowCounterClockwise size={13} weight="bold" />
+                  </button>
+                </>
+              )}
+
+              {!isRunning ? (
+                <button
+                  type="button"
+                  onClick={startTimer}
+                  title="Start Stopwatch (Spacebar)"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+                  style={{ backgroundColor: activeColor }}
+                >
+                  <Play size={13} weight="fill" className="ml-0.5" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => finishSession()}
+                  title="Stop & Log Session"
+                  className="w-7 h-7 rounded-full flex items-center justify-center bg-[#FF4B4B] hover:bg-[#E03A3A] text-white transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <Stop size={13} weight="fill" />
+                </button>
+              )}
+            </div>
+
+            {/* Subtle Vertical Divider */}
+            <div className="h-4 w-[1px] bg-[var(--border-color)] mx-0.5 hidden sm:block" />
+
+            {/* Total Duration */}
             {totalRangeSeconds > 0 && (
-              <div className="text-xs font-mono font-bold text-[var(--text-normal)] mr-1 hidden md:block">
+              <div className="text-xs font-mono font-bold text-[var(--text-normal)] hidden lg:block">
                 Total: {formatDuration(totalRangeSeconds)}
               </div>
             )}
@@ -178,7 +433,7 @@ export const FocusCalendarView: React.FC = () => {
                   : 'border-[var(--border-color)] text-[var(--text-light)] hover:text-[var(--text-normal)]'
               }`}
             >
-              <ChartPieSlice size={15} weight={showSummary ? 'fill' : 'regular'} />
+              <ChartPieSlice size={14} weight={showSummary ? 'fill' : 'regular'} />
             </button>
 
             {/* Icon-Only View Switcher (Month, Week, Day) */}
@@ -193,7 +448,7 @@ export const FocusCalendarView: React.FC = () => {
                     : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
                 }`}
               >
-                <CalendarBlank size={15} weight={viewMode === 'month' ? 'fill' : 'regular'} />
+                <CalendarBlank size={14} weight={viewMode === 'month' ? 'fill' : 'regular'} />
               </button>
               <button
                 type="button"
@@ -205,7 +460,7 @@ export const FocusCalendarView: React.FC = () => {
                     : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
                 }`}
               >
-                <Columns size={15} weight={viewMode === 'week' ? 'fill' : 'regular'} />
+                <Columns size={14} weight={viewMode === 'week' ? 'fill' : 'regular'} />
               </button>
               <button
                 type="button"
@@ -217,27 +472,7 @@ export const FocusCalendarView: React.FC = () => {
                     : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
                 }`}
               >
-                <Clock size={15} weight={viewMode === 'day' ? 'fill' : 'regular'} />
-              </button>
-            </div>
-
-            {/* Prev / Next Navigation Arrows (Replacing Add Entry) */}
-            <div className="flex items-center border border-[var(--border-color)] rounded-lg p-0.5">
-              <button
-                type="button"
-                onClick={handlePrev}
-                className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] transition-colors cursor-pointer"
-                title="Previous"
-              >
-                <CaretLeft size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={handleNext}
-                className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] transition-colors cursor-pointer"
-                title="Next"
-              >
-                <CaretRight size={14} />
+                <Clock size={14} weight={viewMode === 'day' ? 'fill' : 'regular'} />
               </button>
             </div>
           </div>
@@ -305,15 +540,15 @@ export const FocusCalendarView: React.FC = () => {
                         <div
                           key={s.id}
                           onClick={(e) => handleSessionClick(e, s)}
-                          className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-[var(--border-color)] text-[10px] truncate cursor-pointer transition-colors"
-                          title={`${s.taskTitle} (${formatDuration(s.durationSeconds)})`}
+                          className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-[var(--border-color)] bg-[var(--node-bg)] text-[10px] truncate cursor-pointer transition-colors"
+                          title={`#${s.tagName} (${formatDuration(s.durationSeconds)})`}
                         >
                           <span
                             className="w-1.5 h-1.5 rounded-full shrink-0"
                             style={{ backgroundColor: s.tagColor }}
                           />
-                          <span className="font-medium text-[var(--text-hover)] truncate flex-1">
-                            {s.taskTitle}
+                          <span className="font-semibold text-[var(--text-hover)] truncate flex-1">
+                            #{s.tagName}
                           </span>
                           <span className="font-mono text-[var(--text-light)] text-[9px] shrink-0">
                             {formatDuration(s.durationSeconds)}
@@ -460,7 +695,7 @@ export const FocusCalendarView: React.FC = () => {
                               style={{ backgroundColor: selectedTag?.color || '#58CC02' }}
                             />
                             <span className="text-[11px] font-bold text-[var(--text-hover)] truncate">
-                              {taskTitle || 'Tracking...'}
+                              #{selectedTag?.name || 'Focus'}
                             </span>
                           </div>
                           <span className="text-[10px] font-mono font-bold text-[#58CC02]">
@@ -495,31 +730,26 @@ export const FocusCalendarView: React.FC = () => {
                               height: `${height}px`,
                               borderLeftColor: s.tagColor,
                             }}
-                            className="absolute left-1 right-1 z-10 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] p-1.5 cursor-pointer transition-all flex flex-col justify-between overflow-hidden group"
+                            className="absolute left-1 right-1 z-10 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] bg-[var(--node-bg)] shadow-xs hover:border-[var(--text-light)] p-1.5 cursor-pointer transition-all flex flex-col justify-between overflow-hidden group"
                           >
                             <div className="flex items-start justify-between gap-1 min-w-0">
                               <div className="min-w-0 flex-1">
-                                <span className="text-xs font-bold text-[var(--text-hover)] truncate block leading-tight">
-                                  {s.taskTitle}
-                                </span>
-                                {height >= 42 && (
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <span
-                                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                                      style={{ backgroundColor: s.tagColor }}
-                                    />
-                                    <span className="text-[10px] text-[var(--text-light)] font-medium truncate">
-                                      #{s.tagName}
-                                    </span>
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: s.tagColor }}
+                                  />
+                                  <span className="text-xs font-bold text-[var(--text-hover)] truncate block leading-tight">
+                                    #{s.tagName}
+                                  </span>
+                                </div>
                               </div>
                               <span className="text-[10px] font-mono font-bold text-[var(--text-normal)] shrink-0">
                                 {formatDuration(s.durationSeconds)}
                               </span>
                             </div>
 
-                            {height >= 55 && (
+                            {height >= 48 && (
                               <div className="text-[10px] font-mono text-[var(--text-light)] pt-0.5">
                                 {startStr} - {endStr}
                               </div>

@@ -18,7 +18,6 @@ interface FocusContextType {
   elapsedSeconds: number;
   isRunning: boolean;
   isPaused: boolean;
-  taskTitle: string;
   selectedTag: FocusTag | undefined;
   startTimer: () => void;
   pauseTimer: () => void;
@@ -29,7 +28,6 @@ interface FocusContextType {
   setSelectedMinutes: (mins: number) => void;
   setCustomDuration: (seconds: number) => void;
   setSelectedTagId: (id: string) => void;
-  setTaskTitle: (title: string) => void;
   createTag: (name: string, color?: string) => void;
   createMultipleTags: (names: string[], baseColor?: string) => void;
   updateTag: (id: string, partial: Partial<FocusTag>) => void;
@@ -39,7 +37,6 @@ interface FocusContextType {
   restartSession: (session: FocusSession) => void;
   addManualSession: (data: {
     tagId: string;
-    taskTitle: string;
     startedAt: number;
     endedAt: number;
   }) => void;
@@ -60,7 +57,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [taskTitle, setTaskTitle] = useState<string>('');
 
   const timerRef = useRef<number | null>(null);
   const sessionStartTimeRef = useRef<number>(Date.now());
@@ -93,7 +89,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         tagId: currentActiveTag.id,
         tagName: currentActiveTag.name,
         tagColor: currentActiveTag.color,
-        taskTitle: taskTitle.trim() || `${currentActiveTag.name} Session`,
         durationSeconds: duration,
         mode: 'stopwatch',
         startedAt: sessionStartTimeRef.current,
@@ -106,7 +101,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsRunning(false);
     setIsPaused(false);
     setElapsedSeconds(0);
-  }, [elapsedSeconds, tags, selectedTagId, taskTitle]);
+  }, [elapsedSeconds, tags, selectedTagId]);
 
   // Main stopwatch tick
   useEffect(() => {
@@ -215,7 +210,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const restartSession = useCallback((session: FocusSession) => {
     setSelectedTagId(session.tagId);
-    setTaskTitle(session.taskTitle);
     setElapsedSeconds(0);
     setIsRunning(true);
     setIsPaused(false);
@@ -225,7 +219,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addManualSession = useCallback((data: {
     tagId: string;
-    taskTitle: string;
     startedAt: number;
     endedAt: number;
   }) => {
@@ -236,7 +229,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       tagId: targetTag.id,
       tagName: targetTag.name,
       tagColor: targetTag.color,
-      taskTitle: data.taskTitle.trim() || `${targetTag.name} Session`,
       durationSeconds: duration,
       mode: 'countdown',
       startedAt: data.startedAt,
@@ -279,7 +271,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         elapsedSeconds,
         isRunning,
         isPaused,
-        taskTitle,
         selectedTag,
         startTimer,
         pauseTimer,
@@ -290,7 +281,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSelectedMinutes,
         setCustomDuration,
         setSelectedTagId,
-        setTaskTitle,
         createTag,
         createMultipleTags,
         updateTag,
