@@ -201,8 +201,44 @@ export function optimizeAllEdges(nodes: Node[], edges: Edge[]): Edge[] {
   });
 }
 
+export function optimizeNodeEdges(nodeId: string, nodes: Node[], edges: Edge[]): Edge[] {
+  const nodeMap = new Map<string, Node>(nodes.map((n) => [n.id, n]));
+  const targetNode = nodeMap.get(nodeId);
+  if (!targetNode) return edges;
+
+  const affectedIds = new Set<string>([nodeId]);
+  if (targetNode.type === 'groupNode') {
+    nodes.forEach((n) => {
+      if (n.parentId === nodeId) affectedIds.add(n.id);
+    });
+  }
+
+  let modified = false;
+  const nextEdges = edges.map((edge) => {
+    if (!affectedIds.has(edge.source) && !affectedIds.has(edge.target)) {
+      return edge;
+    }
+
+    const sourceNode = nodeMap.get(edge.source);
+    const targetNode = nodeMap.get(edge.target);
+    if (!sourceNode || !targetNode) return edge;
+
+    const { sourceHandle, targetHandle } = getOptimalHandles(sourceNode, targetNode, nodeMap);
+
+    if (edge.sourceHandle === sourceHandle && edge.targetHandle === targetHandle) {
+      return edge;
+    }
+
+    modified = true;
+    return { ...edge, sourceHandle, targetHandle };
+  });
+
+  return modified ? nextEdges : edges;
+}
+
 export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
   // 1. Map each groupNode to its set of child node IDs
+  const nodeMap = new Map<string, Node>(nodes.map((n) => [n.id, n]));
   const groupChildrenMap = new Map<string, Set<string>>();
   nodes.forEach((n) => {
     if (n.type === 'groupNode') {
@@ -211,7 +247,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     }
   });
 
-  // 2. Collect base edges
+  // 2. Collect base edges (only manual/persistent edges; exclude auto wiki-links and group auto-edges so stale ones disappear)
   const baseEdges: Edge[] = [];
   const baseEdgeKeySet = new Set<string>();
 
@@ -223,7 +259,17 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     }
   };
 
-  edges.forEach((edge) => addBaseEdge(edge));
+  const isParentChildEdge = (srcId: string, tgtId: string) => {
+    const srcNode = nodeMap.get(srcId);
+    const tgtNode = nodeMap.get(tgtId);
+    return srcNode?.parentId === tgtId || tgtNode?.parentId === srcId;
+  };
+
+  edges.forEach((edge) => {
+    if (!edge.data?.isWikiLink && !edge.data?.isGroupAutoEdge && !isParentChildEdge(edge.source, edge.target)) {
+      addBaseEdge(edge);
+    }
+  });
 
   // 3. Scan for Wiki-Links
   const titleToNodeIdsMap = new Map<string, string[]>();
@@ -289,7 +335,7 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
     const childIds = Array.from(childSet);
 
     nodes.forEach((xNode) => {
-      if (xNode.id === group.id) return;
+      if (xNode.id === group.id || childSet.has(xNode.id)) return;
 
       const targetId = xNode.id;
       const relevantChildren = childIds.filter((cid) => cid !== targetId);

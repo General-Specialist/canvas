@@ -1,13 +1,19 @@
 import React, { useState, useLayoutEffect, useRef, memo } from 'react';
-import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
+import { NodeProps, useReactFlow, NodeResizer, useNodesData } from '@xyflow/react';
 import { NoteNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
 import { WikilinkText } from '../WikilinkText';
 import { syncAutoEdges } from '../../utils/edgeUtils';
+import { getGroupTheme } from './GroupNode';
 
-export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
+export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable, parentId }) => {
   const { setNodes, setEdges } = useReactFlow();
   const nodeData = data as unknown as NoteNodeData;
+
+  const parentNode = useNodesData(parentId || '');
+  const parentColor = (parentNode?.data as Record<string, any>)?.color;
+  const parentTheme = parentId && parentNode ? getGroupTheme(parentColor) : null;
+  const borderStyleClass = parentTheme ? `border-2 ${parentTheme.border}` : 'border border-[var(--node-border)]';
 
   const titleText = nodeData.title || '';
   const contentText = nodeData.content || '';
@@ -57,7 +63,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
 
   return (
     <div
-      className={`relative w-full h-full min-w-[180px] min-h-[90px] rounded-xl border border-[var(--node-border)] bg-[var(--node-bg)] flex flex-col p-3.5 transition-shadow duration-150 ${
+      className={`relative w-full h-full min-w-[180px] min-h-[90px] rounded-xl ${borderStyleClass} bg-[var(--node-bg)] flex flex-col p-3.5 transition-all duration-150 ${
         selected
           ? 'ring-2 ring-[var(--node-selected-ring)]'
           : 'hover:ring-2 hover:ring-[var(--node-hover-ring)]'

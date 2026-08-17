@@ -33,6 +33,7 @@ import {
 import {
   getNodeAbsolutePos,
   syncAutoEdges,
+  optimizeNodeEdges,
   expandGroupEdges,
   sortNodesByDepth,
   autoWrapConnectedNodeTitles,
@@ -55,14 +56,23 @@ const InnerCanvas: React.FC = () => {
   const onNodesChange = useCallback(
     (changes: any) => {
       onNodesChangeBase(changes);
-      if (changes.some((c: any) => c.type === 'dimensions')) {
+      const movedChanges = changes.filter((c: any) => c.type === 'position' || c.type === 'dimensions');
+      if (movedChanges.length > 0) {
         setNodes((currentNodes) => {
-          setEdges((eds) => syncAutoEdges(currentNodes, eds) as CanvasEdge[]);
+          let updated = edges;
+          movedChanges.forEach((c: any) => {
+            if (c.id) {
+              updated = optimizeNodeEdges(c.id, currentNodes, updated) as CanvasEdge[];
+            }
+          });
+          if (updated !== edges) {
+            setEdges(updated);
+          }
           return currentNodes;
         });
       }
     },
-    [onNodesChangeBase, setNodes, setEdges]
+    [onNodesChangeBase, edges, setNodes, setEdges]
   );
   const [menu, setMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -288,11 +298,166 @@ const InnerCanvas: React.FC = () => {
     };
   }, [exitGroupMode, handleUngroupSelectedNodes, getNodes]);
 
+  const handleRemoveNodeFromGroup = useCallback(
+    (nodeId: string) => {
+      setNodes((currentNodes) => {
+        const nodeMap = new Map<string, CanvasNode>(currentNodes.map((n) => [n.id, n]));
+        const targetNode = nodeMap.get(nodeId);
+        if (!targetNode || !targetNode.parentId) return currentNodes;
+
+        const absPos = getNodeAbsolutePos(targetNode, nodeMap);
+        const updatedNodes = currentNodes.map((n) => {
+          if (n.id === nodeId) {
+            return {
+              ...n,
+              parentId: undefined,
+              position: {
+                x: Math.round(absPos.x),
+                y: Math.round(absPos.y),
+              },
+            };
+          }
+          return n;
+        });
+
+        const sorted = sortNodesByDepth(updatedNodes);
+        setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
+        return sorted;
+      });
+    },
+    [setNodes, setEdges]
+  );
+
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
-    (_event, _node, allNodes) => {
-      setEdges((prevEdges) => syncAutoEdges(allNodes, prevEdges) as CanvasEdge[]);
+    (_event, node, allNodes) => {
+      setEdges((prevEdges) => optimizeNodeEdges(node.id, allNodes, prevEdges) as CanvasEdge[]);
     },
     [setEdges]
+  );
+
+  const handleNodeDragStop: OnNodeDrag<CanvasNode> = useCallback(
+    (_event, draggedNode) => {
+      if (draggedNode.type === 'groupNode') {
+        setNodes((currentNodes) => {
+          setEdges((prevEdges) => syncAutoEdges(currentNodes, prevEdges) as CanvasEdge[]);
+          return currentNodes;
+        });
+        return;
+      }
+
+      setNodes((currentNodes) => {
+        const nodeMap = new Map<string, CanvasNode>(currentNodes.map((n) => [n.id, n]));
+        const targetNode = nodeMap.get(draggedNode.id);
+        if (!targetNode) return currentNodes;
+
+        const absPos = getNodeAbsolutePos(targetNode, nodeMap);
+        const defaultW = targetNode.type === 'noteNode' ? 260 : targetNode.type === 'edgeJunction' ? 16 : 300;
+        const defaultH = targetNode.type === 'noteNode' ? 100 : targetNode.type === 'edgeJunction' ? 16 : 200;
+        const nodeW = targetNode.measured?.width || targetNode.width || (targetNode.style?.width as number) || defaultW;
+        const nodeH = targetNode.measured?.height || targetNode.height || (targetNode.style?.height as number) || defaultH;
+        const nodeCenterX = absPos.x + nodeW / 2;
+        const nodeCenterY = absPos.y + nodeH / 2;
+
+        const groupNodes = currentNodes.filter((n) => n.type === 'groupNode' && n.id !== targetNode.id);
+
+        let containingGroup: CanvasNode | null = null;
+        for (const group of groupNodes) {
+          const groupAbsPos = getNodeAbsolutePos(group, nodeMap);
+          const groupW = group.measured?.width || group.width || (group.style?.width as number) || 400;
+          const groupH = group.measured?.height || group.height || (group.style?.height as number) || 280;
+
+          if (
+            nodeCenterX >= groupAbsPos.x &&
+            nodeCenterX <= groupAbsPos.x + groupW &&
+            nodeCenterY >= groupAbsPos.y &&
+            nodeCenterY <= groupAbsPos.y + groupH
+          ) {
+            containingGroup = group;
+            break;
+          }
+        }
+
+        if (targetNode.parentId) {
+          const currentParent = groupNodes.find((g) => g.id === targetNode.parentId);
+          let stillInCurrentParent = false;
+
+          if (currentParent) {
+            const parentAbsPos = getNodeAbsolutePos(currentParent, nodeMap);
+            const parentW = currentParent.measured?.width || currentParent.width || (currentParent.style?.width as number) || 400;
+            const parentH = currentParent.measured?.height || currentParent.height || (currentParent.style?.height as number) || 280;
+
+            stillInCurrentParent =
+              nodeCenterX >= parentAbsPos.x &&
+              nodeCenterX <= parentAbsPos.x + parentW &&
+              nodeCenterY >= parentAbsPos.y &&
+              nodeCenterY <= parentAbsPos.y + parentH;
+          }
+
+          if (!stillInCurrentParent) {
+            if (containingGroup) {
+              const newGroupAbsPos = getNodeAbsolutePos(containingGroup, nodeMap);
+              const updatedNodes = currentNodes.map((n) => {
+                if (n.id === targetNode.id) {
+                  return {
+                    ...n,
+                    parentId: containingGroup!.id,
+                    position: {
+                      x: Math.round(absPos.x - newGroupAbsPos.x),
+                      y: Math.round(absPos.y - newGroupAbsPos.y),
+                    },
+                  };
+                }
+                return n;
+              });
+              const sorted = sortNodesByDepth(updatedNodes);
+              setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
+              return sorted;
+            } else {
+              const updatedNodes = currentNodes.map((n) => {
+                if (n.id === targetNode.id) {
+                  return {
+                    ...n,
+                    parentId: undefined,
+                    position: {
+                      x: Math.round(absPos.x),
+                      y: Math.round(absPos.y),
+                    },
+                  };
+                }
+                return n;
+              });
+              const sorted = sortNodesByDepth(updatedNodes);
+              setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
+              return sorted;
+            }
+          }
+        } else {
+          if (containingGroup) {
+            const newGroupAbsPos = getNodeAbsolutePos(containingGroup, nodeMap);
+            const updatedNodes = currentNodes.map((n) => {
+              if (n.id === targetNode.id) {
+                return {
+                  ...n,
+                  parentId: containingGroup!.id,
+                  position: {
+                    x: Math.round(absPos.x - newGroupAbsPos.x),
+                    y: Math.round(absPos.y - newGroupAbsPos.y),
+                  },
+                };
+              }
+              return n;
+            });
+            const sorted = sortNodesByDepth(updatedNodes);
+            setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
+            return sorted;
+          }
+        }
+
+        setEdges((eds) => syncAutoEdges(currentNodes, eds) as CanvasEdge[]);
+        return currentNodes;
+      });
+    },
+    [setNodes, setEdges]
   );
 
   const handleConnect = useCallback(
@@ -577,6 +742,19 @@ const InnerCanvas: React.FC = () => {
             className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-48 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
             style={{ top: nodeMenu.y, left: nodeMenu.x }}
           >
+            {targetNode?.parentId && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveNodeFromGroup(nodeMenu.nodeId);
+                  setNodeMenu(null);
+                }}
+                className="w-full text-left px-3 py-1.5 hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--text-hover)] transition-colors flex items-center gap-2 cursor-pointer border-b border-[var(--border-color)] text-[#FF9600]"
+              >
+                <SquaresFour className="w-3.5 h-3.5" />
+                <span>Remove from Group</span>
+              </button>
+            )}
             {selectedCount > 1 && (
               <button
                 onClick={(e) => {
@@ -622,6 +800,7 @@ const InnerCanvas: React.FC = () => {
         onConnect={handleConnect}
         onNodeClick={handleNodeClick}
         onNodeDrag={handleNodeDrag}
+        onNodeDragStop={handleNodeDragStop}
         onNodeContextMenu={handleNodeContextMenu}
         onNodesDelete={handleNodesDelete}
         onSelectionEnd={handleSelectionEnd}

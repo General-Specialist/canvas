@@ -72,6 +72,12 @@ const COLOR_ALIAS: Record<string, string> = {
   rose: 'cardinal',
 };
 
+export function getGroupTheme(colorName?: string) {
+  const rawColor = colorName || 'featherGreen';
+  const currentColor = COLOR_THEMES[rawColor] ? rawColor : COLOR_ALIAS[rawColor] || 'featherGreen';
+  return COLOR_THEMES[currentColor];
+}
+
 export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
   const { setNodes, setEdges } = useReactFlow();
   const groupData = data as unknown as GroupNodeData;
@@ -80,9 +86,7 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  const rawColor = groupData.color || 'featherGreen';
-  const currentColor = COLOR_THEMES[rawColor] ? rawColor : COLOR_ALIAS[rawColor] || 'featherGreen';
-  const themeStyles = COLOR_THEMES[currentColor];
+  const themeStyles = getGroupTheme(groupData.color);
 
   useLayoutEffect(() => {
     if (isEditingTitle && titleRef.current) {
