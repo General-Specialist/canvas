@@ -29,7 +29,11 @@ import { TimeEntryModal } from './TimeEntryModal';
 import { TagDistributionCard } from './TagDistributionCard';
 import { TagManagerModal } from './TagManagerModal';
 import { WebsiteBlockerModal } from './WebsiteBlockerModal';
-import { ShieldCheck } from '@phosphor-icons/react';
+import { GoogleCalendarModal } from './GoogleCalendarModal';
+import { GoogleEventDetailsModal } from './GoogleEventDetailsModal';
+import { useGoogleCalendar } from '../../context/GoogleCalendarContext';
+import { GoogleCalendarEvent } from '../../types/googleCalendar';
+import { ShieldCheck, CalendarCheck } from '@phosphor-icons/react';
 
 
 const START_HOUR = 7; // 7 AM
@@ -58,7 +62,17 @@ export const FocusCalendarView: React.FC = () => {
     blockerConfig,
   } = useFocus();
 
+  const {
+    feeds: gcalFeeds,
+    events: gcalEvents,
+    isSyncing: isGCalSyncing,
+    showGCalEvents,
+  } = useGoogleCalendar();
+
   const [isBlockerModalOpen, setIsBlockerModalOpen] = useState(false);
+  const [isGCalModalOpen, setIsGCalModalOpen] = useState(false);
+  const [selectedGCalEvent, setSelectedGCalEvent] = useState<GoogleCalendarEvent | null>(null);
+  const [isGCalDetailsOpen, setIsGCalDetailsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -241,6 +255,12 @@ export const FocusCalendarView: React.FC = () => {
     e.stopPropagation();
     setSelectedSession(session);
     setIsEntryModalOpen(true);
+  };
+
+  const handleGCalEventClick = (e: React.MouseEvent, event: GoogleCalendarEvent) => {
+    e.stopPropagation();
+    setSelectedGCalEvent(event);
+    setIsGCalDetailsOpen(true);
   };
 
   // Calculate total duration for visible range
@@ -553,6 +573,24 @@ export const FocusCalendarView: React.FC = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#58CC02]" />
               )}
             </button>
+
+            {/* Google Calendar Integration Button */}
+            <button
+              type="button"
+              onClick={() => setIsGCalModalOpen(true)}
+              title="Google Calendar Integration & Sync"
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                gcalFeeds.some((f) => f.enabled)
+                  ? 'border-[#4285F4]/40 text-[#4285F4] bg-[#4285F4]/10 hover:bg-[#4285F4]/20'
+                  : 'border-[var(--border-color)] text-[var(--text-light)] hover:text-[var(--text-normal)] hover:bg-[var(--sidebar-hover-bg)]'
+              }`}
+            >
+              <CalendarCheck size={14} weight={gcalFeeds.some((f) => f.enabled) ? 'fill' : 'bold'} />
+              <span className="hidden sm:inline">Google Cal</span>
+              {isGCalSyncing && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4285F4] animate-ping" />
+              )}
+            </button>
           </div>
         </div>
 
@@ -585,6 +623,9 @@ export const FocusCalendarView: React.FC = () => {
               {monthDays.map((item) => {
                 const isCurrent = isToday(item.date);
                 const daySessions = sessions.filter((s) => isSameDay(s.startedAt, item.date));
+                const dayGCal = showGCalEvents
+                  ? gcalEvents.filter((e) => isSameDay(e.start, item.date))
+                  : [];
                 const dayTotalSecs = daySessions.reduce((acc, s) => acc + s.durationSeconds, 0);
 
                 return (
@@ -613,9 +654,10 @@ export const FocusCalendarView: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Sessions List in Month Cell */}
+                    {/* Sessions & GCal Events List in Month Cell */}
                     <div className="flex-1 space-y-1 overflow-hidden">
-                      {daySessions.slice(0, 3).map((s) => (
+                      {/* Logged Focus Sessions */}
+                      {daySessions.slice(0, 2).map((s) => (
                         <div
                           key={s.id}
                           onClick={(e) => handleSessionClick(e, s)}
@@ -634,9 +676,33 @@ export const FocusCalendarView: React.FC = () => {
                           </span>
                         </div>
                       ))}
-                      {daySessions.length > 3 && (
+
+                      {/* Google Calendar Events */}
+                      {dayGCal.slice(0, 2).map((e) => (
+                        <div
+                          key={e.id}
+                          onClick={(ev) => handleGCalEventClick(ev, e)}
+                          className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-[var(--border-color)] bg-[var(--sidebar-bg)]/60 text-[10px] truncate cursor-pointer transition-colors hover:border-[var(--text-light)]"
+                          title={`[GCal] ${e.title}`}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: e.calendarColor }}
+                          />
+                          <span className="font-medium text-[var(--text-hover)] truncate flex-1">
+                            {e.title}
+                          </span>
+                          {!e.allDay && (
+                            <span className="font-mono text-[var(--text-light)] text-[9px] shrink-0">
+                              {new Date(e.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+
+                      {daySessions.length + dayGCal.length > 4 && (
                         <div className="text-[9px] font-mono text-[var(--text-light)] pl-1">
-                          + {daySessions.length - 3} more
+                          + {daySessions.length + dayGCal.length - 4} more
                         </div>
                       )}
                     </div>
@@ -688,6 +754,35 @@ export const FocusCalendarView: React.FC = () => {
               </div>
             </div>
 
+            {/* All-Day Events Banner (if any exist for visible days) */}
+            {showGCalEvents && visibleDays.some((day) => gcalEvents.some((e) => e.allDay && isSameDay(e.start, day))) && (
+              <div className="flex border-b border-[var(--border-color)] bg-[var(--sidebar-bg)]/30 min-h-[32px]">
+                <div className="w-14 sm:w-16 shrink-0 border-r border-[var(--border-color)] p-1.5 text-center text-[10px] font-mono text-[var(--text-light)] flex items-center justify-center">
+                  All-day
+                </div>
+                <div className="flex-1 grid grid-flow-col auto-cols-fr divide-x divide-[var(--border-color)] p-1 gap-1">
+                  {visibleDays.map((day) => {
+                    const dayAllDay = gcalEvents.filter((e) => e.allDay && isSameDay(e.start, day));
+                    return (
+                      <div key={day.toISOString()} className="space-y-1 px-1">
+                        {dayAllDay.map((e) => (
+                          <div
+                            key={e.id}
+                            onClick={(ev) => handleGCalEventClick(ev, e)}
+                            style={{ borderLeftColor: e.calendarColor }}
+                            className="px-2 py-0.5 rounded border-l-3 border border-[var(--border-color)] bg-[var(--node-bg)] text-[10px] font-semibold text-[var(--text-hover)] truncate cursor-pointer hover:border-[var(--text-light)] transition-all"
+                            title={`${e.calendarName}: ${e.title}`}
+                          >
+                            {e.title}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Hourly Scrollable Grid Container */}
             <div
               ref={scrollContainerRef}
@@ -713,6 +808,9 @@ export const FocusCalendarView: React.FC = () => {
               <div className="flex-1 grid grid-flow-col auto-cols-fr divide-x divide-[var(--border-color)] relative">
                 {visibleDays.map((day) => {
                   const daySessions = sessions.filter((s) => isSameDay(s.startedAt, day));
+                  const dayGCal = showGCalEvents
+                    ? gcalEvents.filter((e) => !e.allDay && isSameDay(e.start, day))
+                    : [];
                   const isCurrent = isToday(day);
 
                   // Check for live active session today
@@ -789,6 +887,73 @@ export const FocusCalendarView: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Synced Google Calendar Events Blocks */}
+                      {dayGCal.map((e) => {
+                        const start = new Date(e.start);
+                        const end = new Date(e.end);
+                        const startHour = start.getHours() + start.getMinutes() / 60 + start.getSeconds() / 3600;
+                        const durationHours = Math.max(0.25, (e.end - e.start) / 3600000);
+                        const top = Math.max(0, (startHour - START_HOUR) * hourHeight);
+                        const height = Math.max(22, durationHours * hourHeight);
+
+                        const startStr = start.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        });
+                        const endStr = end.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        });
+
+                        return (
+                          <div
+                            key={e.id}
+                            onClick={(ev) => handleGCalEventClick(ev, e)}
+                            style={{
+                              top: `${top}px`,
+                              height: `${height}px`,
+                              borderLeftColor: e.calendarColor,
+                            }}
+                            className="absolute left-1 right-1 z-10 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] bg-[var(--node-bg)] shadow-xs hover:border-[var(--text-light)] p-1.5 cursor-pointer transition-all overflow-hidden group hover:z-20"
+                            title={`[Google Calendar] ${e.title} (${startStr} - ${endStr})`}
+                          >
+                            {height < 46 ? (
+                              <div className="flex items-center justify-between gap-1 min-w-0 h-full">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: e.calendarColor }}
+                                  />
+                                  <span className="text-xs font-semibold text-[var(--text-hover)] truncate block leading-none">
+                                    {e.title}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-mono text-[var(--text-light)] shrink-0">
+                                  {startStr}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col justify-between h-full">
+                                <div className="flex items-start justify-between gap-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span
+                                      className="w-2 h-2 rounded-full shrink-0"
+                                      style={{ backgroundColor: e.calendarColor }}
+                                    />
+                                    <span className="text-xs font-semibold text-[var(--text-hover)] truncate block leading-tight">
+                                      {e.title}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-[10px] font-mono text-[var(--text-light)] pt-0.5 truncate">
+                                  {startStr} - {endStr}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
 
                       {/* Logged Focus Sessions Blocks */}
                       {daySessions.map((s) => {
@@ -876,6 +1041,22 @@ export const FocusCalendarView: React.FC = () => {
         session={selectedSession}
         defaultDate={modalDefaultDate}
         defaultStartHour={modalDefaultHour}
+      />
+
+      {/* Google Calendar Integration Modal */}
+      <GoogleCalendarModal
+        isOpen={isGCalModalOpen}
+        onClose={() => setIsGCalModalOpen(false)}
+      />
+
+      {/* Google Calendar Event Details Modal */}
+      <GoogleEventDetailsModal
+        isOpen={isGCalDetailsOpen}
+        event={selectedGCalEvent}
+        onClose={() => {
+          setIsGCalDetailsOpen(false);
+          setSelectedGCalEvent(null);
+        }}
       />
     </div>
   );

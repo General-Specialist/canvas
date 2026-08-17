@@ -1,12 +1,15 @@
 import { JarvisShell } from './components/shell/JarvisShell';
 import { ThemeProvider } from './context/ThemeContext';
 import { FocusProvider } from './context/FocusContext';
+import { GoogleCalendarProvider } from './context/GoogleCalendarContext';
 
 function App() {
   return (
     <ThemeProvider>
       <FocusProvider>
-        <JarvisShell />
+        <GoogleCalendarProvider>
+          <JarvisShell />
+        </GoogleCalendarProvider>
       </FocusProvider>
     </ThemeProvider>
   );

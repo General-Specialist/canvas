@@ -30,6 +30,32 @@ fn get_focus_state(global: State<'_, GlobalFocusState>) -> Result<FocusState, St
     Ok(read_guard.clone())
 }
 
+#[tauri::command]
+async fn fetch_ical_feed(url: String) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch calendar feed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Calendar server returned HTTP {}", response.status()));
+    }
+
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read calendar response text: {}", e))?;
+
+    Ok(body)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let (tx, _rx) = broadcast::channel::<FocusState>(100);
@@ -45,7 +71,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             update_focus_state,
-            get_focus_state
+            get_focus_state,
+            fetch_ical_feed
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
