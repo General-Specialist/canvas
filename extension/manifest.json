@@ -1,0 +1,42 @@
+{
+  "manifest_version": 2,
+  "name": "Jarvis Focus Blocker",
+  "version": "1.0.2",
+  "description": "Syncs LibreWolf website blocking with your Jarvis Focus timer.",
+
+
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "tabs",
+    "storage",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+  "browser_action": {
+    "default_title": "Jarvis Focus Blocker",
+    "default_icon": "icons/icon.svg",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  },
+  "web_accessible_resources": [
+    "blocked.html",
+    "blocked.css",
+    "blocked.js"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "focus-blocker@jarvis.local",
+      "strict_min_version": "100.0"
+    }
+  }
+}

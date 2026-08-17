@@ -1,12 +1,46 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { FocusSession, FocusTag, FocusTimerMode, TAG_COLORS } from '../types/focus';
 import {
+  FocusBlockerConfig,
+  FocusBlockingMode,
+  FocusSession,
+  FocusTag,
+  FocusTimerMode,
+  TAG_COLORS,
+} from '../types/focus';
+
+import {
+  loadSavedBlockerConfig,
   loadSavedSessions,
   loadSavedTags,
   playFocusSound,
+  saveBlockerConfig,
   saveSessions,
   saveTags,
 } from '../utils/focusStorage';
+
+// Safe Tauri state sync helper
+const syncToTauriBridge = async (payload: {
+  isRunning: boolean;
+  isPaused: boolean;
+  selectedTagId: string;
+  selectedTagName: string;
+  selectedTagColor: string;
+  elapsedSeconds: number;
+  mode: string;
+  blockingEnabled: boolean;
+  blockingMode: string;
+  blockedDomains: string[];
+  unlockedUntil: number | null;
+  activeSiteStopwatches: Record<string, number>;
+  lastUpdated: number;
+}) => {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('update_focus_state', { newState: payload });
+  } catch {
+    // If not in Tauri or during initial load, fallback gracefully
+  }
+};
 
 interface FocusContextType {
   tags: FocusTag[];
@@ -19,6 +53,19 @@ interface FocusContextType {
   isRunning: boolean;
   isPaused: boolean;
   selectedTag: FocusTag | undefined;
+  // Blocker Config
+  blockerConfig: FocusBlockerConfig;
+  updateBlockerConfig: (partial: Partial<FocusBlockerConfig>) => void;
+  addBlockedDomain: (domain: string) => void;
+  removeBlockedDomain: (domain: string) => void;
+  setBlockingMode: (mode: FocusBlockingMode) => void;
+  toggleBlockingEnabled: () => void;
+  tempUnlock: (minutes: number) => void;
+  startSiteStopwatch: (domain: string) => void;
+  stopSiteStopwatch: (domain: string) => void;
+
+
+  // Timer Actions
   startTimer: () => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
@@ -49,6 +96,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [tags, setTags] = useState<FocusTag[]>(loadSavedTags);
   const [selectedTagId, setSelectedTagId] = useState<string>(() => loadSavedTags()[0]?.id || 'tag-coding');
   const [sessions, setSessions] = useState<FocusSession[]>(loadSavedSessions);
+  const [blockerConfig, setBlockerConfig] = useState<FocusBlockerConfig>(loadSavedBlockerConfig);
 
   const [mode] = useState<FocusTimerMode>('stopwatch');
   const [selectedMinutes] = useState<number>(25);
@@ -70,7 +118,39 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     saveSessions(sessions);
   }, [sessions]);
 
+  useEffect(() => {
+    saveBlockerConfig(blockerConfig);
+  }, [blockerConfig]);
+
   const selectedTag = tags.find((t) => t.id === selectedTagId) || tags[0];
+
+  // Sync state to Tauri backend whenever key fields update
+  useEffect(() => {
+    syncToTauriBridge({
+      isRunning,
+      isPaused,
+      selectedTagId: selectedTag?.id || 'tag-coding',
+      selectedTagName: selectedTag?.name || 'Focus',
+      selectedTagColor: selectedTag?.color || '#58CC02',
+      elapsedSeconds,
+      mode,
+      blockingEnabled: blockerConfig.enabled,
+      blockingMode: blockerConfig.mode,
+      blockedDomains: blockerConfig.blockedDomains,
+      unlockedUntil: blockerConfig.unlockedUntil ?? null,
+      activeSiteStopwatches: blockerConfig.activeSiteStopwatches || {},
+      lastUpdated: Date.now(),
+    });
+
+
+  }, [
+    isRunning,
+    isPaused,
+    selectedTag,
+    elapsedSeconds,
+    mode,
+    blockerConfig,
+  ]);
 
   const setMode = useCallback(() => {}, []);
   const setSelectedMinutes = useCallback(() => {}, []);
@@ -138,6 +218,75 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsPaused(false);
     setElapsedSeconds(0);
   }, []);
+
+  const updateBlockerConfig = useCallback((partial: Partial<FocusBlockerConfig>) => {
+    setBlockerConfig((prev) => ({ ...prev, ...partial }));
+  }, []);
+
+  const addBlockedDomain = useCallback((domain: string) => {
+    const cleaned = domain
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '')
+      .replace(/^www\./, '');
+    if (!cleaned) return;
+
+    setBlockerConfig((prev) => {
+      if (prev.blockedDomains.includes(cleaned)) return prev;
+      return {
+        ...prev,
+        blockedDomains: [...prev.blockedDomains, cleaned],
+      };
+    });
+  }, []);
+
+  const removeBlockedDomain = useCallback((domain: string) => {
+    setBlockerConfig((prev) => ({
+      ...prev,
+      blockedDomains: prev.blockedDomains.filter((d) => d !== domain),
+    }));
+  }, []);
+
+  const setBlockingMode = useCallback((mode: FocusBlockingMode) => {
+    setBlockerConfig((prev) => ({ ...prev, mode }));
+  }, []);
+
+  const toggleBlockingEnabled = useCallback(() => {
+    setBlockerConfig((prev) => ({ ...prev, enabled: !prev.enabled }));
+  }, []);
+
+  const tempUnlock = useCallback((minutes: number) => {
+    const unlockTime = Date.now() + minutes * 60 * 1000;
+    setBlockerConfig((prev) => ({ ...prev, unlockedUntil: unlockTime }));
+  }, []);
+
+  const startSiteStopwatch = useCallback((domain: string) => {
+    const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+    playFocusSound('start');
+    setBlockerConfig((prev) => ({
+      ...prev,
+      activeSiteStopwatches: {
+        ...(prev.activeSiteStopwatches || {}),
+        [cleaned]: Date.now(),
+      },
+    }));
+  }, []);
+
+  const stopSiteStopwatch = useCallback((domain: string) => {
+    const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+    playFocusSound('complete');
+    setBlockerConfig((prev) => {
+      const copy = { ...(prev.activeSiteStopwatches || {}) };
+      delete copy[cleaned];
+      return {
+        ...prev,
+        activeSiteStopwatches: copy,
+      };
+    });
+  }, []);
+
+
 
   const createTag = useCallback((name: string, color?: string) => {
     if (!name.trim()) return;
@@ -272,7 +421,18 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isRunning,
         isPaused,
         selectedTag,
+        blockerConfig,
+        updateBlockerConfig,
+        addBlockedDomain,
+        removeBlockedDomain,
+        setBlockingMode,
+        toggleBlockingEnabled,
+        tempUnlock,
+        startSiteStopwatch,
+        stopSiteStopwatch,
         startTimer,
+
+
         pauseTimer,
         resumeTimer,
         resetTimer,

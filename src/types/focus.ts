@@ -19,6 +19,37 @@ export interface FocusSession {
   endedAt: number;
 }
 
+export type FocusBlockingMode = 'unlock_on_timer' | 'block_on_timer';
+
+export interface FocusBlockerConfig {
+  enabled: boolean;
+  mode: FocusBlockingMode;
+  blockedDomains: string[];
+  unlockedUntil?: number | null;
+  activeSiteStopwatches?: Record<string, number>; // domain -> startedAt timestamp
+}
+
+
+
+export const DEFAULT_BLOCKED_DOMAINS: string[] = [
+  'youtube.com',
+  'twitter.com',
+  'x.com',
+  'reddit.com',
+  'instagram.com',
+  'facebook.com',
+  'tiktok.com',
+  'twitch.tv',
+  'netflix.com',
+];
+
+export const DEFAULT_BLOCKER_CONFIG: FocusBlockerConfig = {
+  enabled: true,
+  mode: 'unlock_on_timer',
+  blockedDomains: DEFAULT_BLOCKED_DOMAINS,
+  unlockedUntil: null,
+};
+
 export const DEFAULT_TAGS: FocusTag[] = [
   { id: 'tag-coding', name: 'Coding', color: '#58CC02', createdAt: 1 },
   { id: 'tag-research', name: 'Research', color: '#1CB0F6', createdAt: 2 },

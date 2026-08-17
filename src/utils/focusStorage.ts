@@ -1,7 +1,35 @@
-import { DEFAULT_TAGS, FocusSession, FocusTag } from '../types/focus';
+import { DEFAULT_BLOCKER_CONFIG, DEFAULT_TAGS, FocusBlockerConfig, FocusSession, FocusTag } from '../types/focus';
 
 const STORAGE_KEY_TAGS = 'jarvis_focus_tags_v1';
 const STORAGE_KEY_SESSIONS = 'jarvis_focus_sessions_v1';
+const STORAGE_KEY_BLOCKER = 'jarvis_focus_blocker_v1';
+
+export const loadSavedBlockerConfig = (): FocusBlockerConfig => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BLOCKER);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.blockedDomains)) {
+        return {
+          ...DEFAULT_BLOCKER_CONFIG,
+          ...parsed,
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load focus blocker config:', err);
+  }
+  return DEFAULT_BLOCKER_CONFIG;
+};
+
+export const saveBlockerConfig = (config: FocusBlockerConfig): void => {
+  try {
+    localStorage.setItem(STORAGE_KEY_BLOCKER, JSON.stringify(config));
+  } catch (err) {
+    console.error('Failed to save focus blocker config:', err);
+  }
+};
+
 
 export const loadSavedTags = (): FocusTag[] => {
   try {

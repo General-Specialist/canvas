@@ -28,6 +28,9 @@ import {
 import { TimeEntryModal } from './TimeEntryModal';
 import { TagDistributionCard } from './TagDistributionCard';
 import { TagManagerModal } from './TagManagerModal';
+import { WebsiteBlockerModal } from './WebsiteBlockerModal';
+import { ShieldCheck } from '@phosphor-icons/react';
+
 
 const START_HOUR = 7; // 7 AM
 const END_HOUR = 24; // 12 AM (Midnight)
@@ -52,9 +55,12 @@ export const FocusCalendarView: React.FC = () => {
     resumeTimer,
     resetTimer,
     finishSession,
+    blockerConfig,
   } = useFocus();
 
+  const [isBlockerModalOpen, setIsBlockerModalOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
       const saved = localStorage.getItem('jarvis_focus_view_mode_v1');
@@ -269,14 +275,20 @@ export const FocusCalendarView: React.FC = () => {
   return (
     <div className="w-full flex flex-col gap-4">
       <TagManagerModal isOpen={isTagModalOpen} onClose={() => setIsTagModalOpen(false)} />
+      <WebsiteBlockerModal isOpen={isBlockerModalOpen} onClose={() => setIsBlockerModalOpen(false)} />
 
       {/* Unified Single Calendar Box */}
+
       <div className="w-full border border-[var(--border-color)] rounded-xl overflow-hidden flex flex-col">
         {/* Integrated Top Calendar & Timer Header */}
         <div className="p-3 sm:p-4 border-b border-[var(--border-color)] flex items-center justify-between gap-3 flex-wrap">
           {/* Left: Date Title & Calendar Navigation */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-sm sm:text-base font-bold text-[var(--text-hover)]">
+            <h2
+              onClick={() => setCurrentDate(new Date())}
+              className="text-sm sm:text-base font-bold text-[var(--text-hover)] cursor-pointer hover:opacity-80 transition-opacity"
+              title="Jump to today"
+            >
               {viewMode === 'month'
                 ? formatMonthHeader(currentDate)
                 : viewMode === 'week'
@@ -284,7 +296,7 @@ export const FocusCalendarView: React.FC = () => {
                 : formatDayHeader(currentDate)}
             </h2>
 
-            {/* Prev / Today / Next Navigation */}
+            {/* Prev / Next Navigation */}
             <div className="flex items-center border border-[var(--border-color)] rounded-lg p-0.5">
               <button
                 type="button"
@@ -293,18 +305,6 @@ export const FocusCalendarView: React.FC = () => {
                 title="Previous"
               >
                 <CaretLeft size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentDate(new Date())}
-                className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
-                  isToday(currentDate)
-                    ? 'text-[#58CC02] font-bold'
-                    : 'text-[var(--text-light)] hover:text-[var(--text-normal)]'
-                }`}
-                title="Jump to Today"
-              >
-                Today
               </button>
               <button
                 type="button"
@@ -492,7 +492,7 @@ export const FocusCalendarView: React.FC = () => {
             {/* Total Duration */}
             {totalRangeSeconds > 0 && (
               <div className="text-xs font-mono font-bold text-[var(--text-normal)] hidden lg:block">
-                Total: {formatDuration(totalRangeSeconds)}
+                {formatDuration(totalRangeSeconds)}
               </div>
             )}
 
@@ -535,8 +535,27 @@ export const FocusCalendarView: React.FC = () => {
                 M
               </button>
             </div>
+
+            {/* LibreWolf Blocker Settings Button */}
+            <button
+              type="button"
+              onClick={() => setIsBlockerModalOpen(true)}
+              title="LibreWolf Website Blocker"
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                blockerConfig.enabled
+                  ? 'border-[#58CC02]/40 text-[#58CC02] bg-[#58CC02]/10 hover:bg-[#58CC02]/20'
+                  : 'border-[var(--border-color)] text-[var(--text-light)] hover:text-[var(--text-normal)] hover:bg-[var(--sidebar-hover-bg)]'
+              }`}
+            >
+              <ShieldCheck size={14} weight={blockerConfig.enabled ? 'fill' : 'bold'} />
+              <span className="hidden sm:inline">Blocker</span>
+              {blockerConfig.enabled && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#58CC02]" />
+              )}
+            </button>
           </div>
         </div>
+
 
         {/* Tag Distribution Summary */}
         {sessions.length > 0 && (
