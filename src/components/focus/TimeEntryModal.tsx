@@ -66,7 +66,9 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
     let endedAt = endDate.getTime();
 
     if (endedAt <= startedAt) {
-      endedAt = startedAt + 30 * 60 * 1000; // default 30 mins if invalid
+      // If same minute or inverted, preserve original duration or default to 15 mins
+      const fallbackMs = session ? Math.max(1000, session.durationSeconds * 1000) : 15 * 60 * 1000;
+      endedAt = startedAt + fallbackMs;
     }
 
     if (session) {
@@ -134,7 +136,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
                       className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: t.color }}
                     />
-                    <span>#{t.name}</span>
+                    <span>{t.name}</span>
                     {isSelected && <Check size={12} weight="bold" />}
                   </button>
                 );

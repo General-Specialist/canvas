@@ -76,10 +76,10 @@ export const JarvisShell: React.FC = () => {
                   <Timer size={20} weight={isActive ? 'fill' : 'bold'} />
                 )}
 
-                {/* Running focus active pulse badge */}
+                {/* Running focus active badge (solid, non-flashing) */}
                 {isFocusActiveRunning && !isActive && (
                   <span
-                    className="absolute top-1 right-1 w-2 h-2 rounded-full animate-pulse ring-2 ring-[var(--sidebar-bg)]"
+                    className="absolute top-1 right-1 w-2 h-2 rounded-full ring-2 ring-[var(--sidebar-bg)]"
                     style={{ backgroundColor: selectedTag?.color || '#58CC02' }}
                   />
                 )}

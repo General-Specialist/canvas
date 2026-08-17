@@ -3,15 +3,13 @@ import {
   CaretLeft,
   CaretRight,
   CaretDown,
-  Clock,
-  CalendarBlank,
-  Columns,
-  ChartPieSlice,
   Play,
   Pause,
   Stop,
   ArrowCounterClockwise,
   Check,
+  Plus,
+  Minus,
   Tag as TagIcon,
 } from '@phosphor-icons/react';
 import { useFocus } from '../../context/FocusContext';
@@ -34,7 +32,6 @@ import { TagManagerModal } from './TagManagerModal';
 const START_HOUR = 7; // 7 AM
 const END_HOUR = 24; // 12 AM (Midnight)
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const HOUR_HEIGHT = 50; // pixels per hour
 const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => START_HOUR + i);
 const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -58,8 +55,58 @@ export const FocusCalendarView: React.FC = () => {
   } = useFocus();
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [showSummary, setShowSummary] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('jarvis_focus_view_mode_v1');
+      if (saved === 'month' || saved === 'week' || saved === 'day') return saved;
+    } catch {}
+    return 'day';
+  });
+
+  const handleSetViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('jarvis_focus_view_mode_v1', mode);
+    } catch {}
+  };
+
+  // Zoom / Hour Height state (defaults to 85px for a spacious, zoomed-in view)
+  const [hourHeight, setHourHeight] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('jarvis_focus_hour_height_v1');
+      if (saved) {
+        const val = Number(saved);
+        if (val >= 50 && val <= 160) return val;
+      }
+    } catch {
+      // fallback
+    }
+    return 85;
+  });
+
+  const handleZoomIn = () => {
+    setHourHeight((prev) => {
+      const next = Math.min(150, prev + 15);
+      try {
+        localStorage.setItem('jarvis_focus_hour_height_v1', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const handleZoomOut = () => {
+    setHourHeight((prev) => {
+      const next = Math.max(50, prev - 15);
+      try {
+        localStorage.setItem('jarvis_focus_hour_height_v1', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   // Timer & Tag Dropdown state
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
@@ -132,15 +179,15 @@ export const FocusCalendarView: React.FC = () => {
       // Scroll to 1 hour before current time, capped so early day is easily reachable
       if (currentH >= START_HOUR && currentH < 18) {
         const scrollOffsetHours = Math.max(0, currentH - START_HOUR - 1);
-        scrollContainerRef.current.scrollTop = scrollOffsetHours * HOUR_HEIGHT;
+        scrollContainerRef.current.scrollTop = scrollOffsetHours * hourHeight;
       } else if (currentH >= 18) {
         // Evening: show from 12 PM onwards
-        scrollContainerRef.current.scrollTop = 4 * HOUR_HEIGHT;
+        scrollContainerRef.current.scrollTop = 4 * hourHeight;
       } else {
         scrollContainerRef.current.scrollTop = 0;
       }
     }
-  }, [viewMode]);
+  }, [viewMode, hourHeight]);
 
   // Current time ticker for the red indicator line
   const [nowDate, setNowDate] = useState<Date>(new Date());
@@ -215,7 +262,7 @@ export const FocusCalendarView: React.FC = () => {
   // Format time of day for live indicator
   const nowHourFloat = nowDate.getHours() + nowDate.getMinutes() / 60;
   const isNowInVisibleRange = nowHourFloat >= START_HOUR && nowHourFloat <= END_HOUR;
-  const nowIndicatorTop = Math.max(0, (nowHourFloat - START_HOUR) * HOUR_HEIGHT);
+  const nowIndicatorTop = Math.max(0, (nowHourFloat - START_HOUR) * hourHeight);
 
   const visibleDays = viewMode === 'week' ? weekDays : [currentDate];
 
@@ -270,7 +317,7 @@ export const FocusCalendarView: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Tag Selector, Timer, Controls & Calendar Tools */}
+          {/* Right: Tag Selector, Timer, Controls, Zoom & Calendar Tools */}
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap ml-auto">
             {/* Tag Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -284,7 +331,7 @@ export const FocusCalendarView: React.FC = () => {
                   style={{ backgroundColor: activeColor }}
                 />
                 <span className="truncate max-w-[100px] sm:max-w-[130px]">
-                  #{selectedTag?.name || 'Tag'}
+                  {selectedTag?.name || 'Tag'}
                 </span>
                 <CaretDown
                   size={12}
@@ -332,7 +379,7 @@ export const FocusCalendarView: React.FC = () => {
                               className="w-2 h-2 rounded-full shrink-0"
                               style={{ backgroundColor: tag.color }}
                             />
-                            <span className="truncate">#{tag.name}</span>
+                            <span className="truncate">{tag.name}</span>
                           </div>
                           {isSelected && (
                             <Check size={14} className="text-[var(--text-hover)] shrink-0" weight="bold" />
@@ -415,6 +462,33 @@ export const FocusCalendarView: React.FC = () => {
             {/* Subtle Vertical Divider */}
             <div className="h-4 w-[1px] bg-[var(--border-color)] mx-0.5 hidden sm:block" />
 
+            {/* Zoom Controls (- / +) for Week & Day views */}
+            {viewMode !== 'month' && (
+              <div className="flex items-center p-0.5 rounded-lg border border-[var(--border-color)]">
+                <button
+                  type="button"
+                  onClick={handleZoomOut}
+                  disabled={hourHeight <= 50}
+                  className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Zoom out calendar"
+                >
+                  <Minus size={12} weight="bold" />
+                </button>
+                <span className="text-[10px] font-mono font-bold text-[var(--text-light)] px-1 select-none">
+                  {Math.round((hourHeight / 85) * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  disabled={hourHeight >= 150}
+                  className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Zoom in calendar"
+                >
+                  <Plus size={12} weight="bold" />
+                </button>
+              </div>
+            )}
+
             {/* Total Duration */}
             {totalRangeSeconds > 0 && (
               <div className="text-xs font-mono font-bold text-[var(--text-normal)] hidden lg:block">
@@ -422,65 +496,51 @@ export const FocusCalendarView: React.FC = () => {
               </div>
             )}
 
-            {/* Toggle Summary Bar */}
-            <button
-              type="button"
-              onClick={() => setShowSummary((prev) => !prev)}
-              title="Toggle tag distribution summary"
-              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                showSummary
-                  ? 'border-[var(--text-hover)] text-[var(--text-hover)]'
-                  : 'border-[var(--border-color)] text-[var(--text-light)] hover:text-[var(--text-normal)]'
-              }`}
-            >
-              <ChartPieSlice size={14} weight={showSummary ? 'fill' : 'regular'} />
-            </button>
-
-            {/* Icon-Only View Switcher (Month, Week, Day) */}
+            {/* View Switcher: D, W, M */}
             <div className="flex items-center p-0.5 rounded-lg border border-[var(--border-color)]">
               <button
                 type="button"
-                onClick={() => setViewMode('month')}
-                title="Month view"
-                className={`p-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer border ${
-                  viewMode === 'month'
-                    ? 'border-[var(--border-color)] text-[var(--text-hover)]'
-                    : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
-                }`}
-              >
-                <CalendarBlank size={14} weight={viewMode === 'month' ? 'fill' : 'regular'} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('week')}
-                title="Week view"
-                className={`p-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer border ${
-                  viewMode === 'week'
-                    ? 'border-[var(--border-color)] text-[var(--text-hover)]'
-                    : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
-                }`}
-              >
-                <Columns size={14} weight={viewMode === 'week' ? 'fill' : 'regular'} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('day')}
+                onClick={() => handleSetViewMode('day')}
                 title="Day view"
-                className={`p-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer border ${
+                className={`w-6 h-6 rounded-md text-xs font-bold transition-colors cursor-pointer flex items-center justify-center border ${
                   viewMode === 'day'
                     ? 'border-[var(--border-color)] text-[var(--text-hover)]'
                     : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
                 }`}
               >
-                <Clock size={14} weight={viewMode === 'day' ? 'fill' : 'regular'} />
+                D
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('week')}
+                title="Week view"
+                className={`w-6 h-6 rounded-md text-xs font-bold transition-colors cursor-pointer flex items-center justify-center border ${
+                  viewMode === 'week'
+                    ? 'border-[var(--border-color)] text-[var(--text-hover)]'
+                    : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
+                }`}
+              >
+                W
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('month')}
+                title="Month view"
+                className={`w-6 h-6 rounded-md text-xs font-bold transition-colors cursor-pointer flex items-center justify-center border ${
+                  viewMode === 'month'
+                    ? 'border-[var(--border-color)] text-[var(--text-hover)]'
+                    : 'border-transparent text-[var(--text-light)] hover:text-[var(--text-normal)]'
+                }`}
+              >
+                M
               </button>
             </div>
           </div>
         </div>
 
-        {/* Collapsible Tag Summary Bar */}
-        {showSummary && (
-          <div className="p-3 border-b border-[var(--border-color)]">
+        {/* Tag Distribution Summary */}
+        {sessions.length > 0 && (
+          <div className="p-3 sm:p-4 border-b border-[var(--border-color)]">
             <TagDistributionCard />
           </div>
         )}
@@ -512,7 +572,7 @@ export const FocusCalendarView: React.FC = () => {
                   <div
                     key={item.date.toISOString()}
                     onClick={() => handleCellClick(item.date, 9)}
-                    className={`min-h-[105px] sm:min-h-[115px] p-2 flex flex-col justify-between transition-colors cursor-pointer ${
+                    className={`min-h-[125px] sm:min-h-[140px] p-2 flex flex-col justify-between transition-colors cursor-pointer ${
                       !item.isCurrentMonth ? 'opacity-30' : ''
                     }`}
                   >
@@ -541,14 +601,14 @@ export const FocusCalendarView: React.FC = () => {
                           key={s.id}
                           onClick={(e) => handleSessionClick(e, s)}
                           className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-[var(--border-color)] bg-[var(--node-bg)] text-[10px] truncate cursor-pointer transition-colors"
-                          title={`#${s.tagName} (${formatDuration(s.durationSeconds)})`}
+                          title={`${s.tagName} (${formatDuration(s.durationSeconds)})`}
                         >
                           <span
                             className="w-1.5 h-1.5 rounded-full shrink-0"
                             style={{ backgroundColor: s.tagColor }}
                           />
                           <span className="font-semibold text-[var(--text-hover)] truncate flex-1">
-                            #{s.tagName}
+                            {s.tagName}
                           </span>
                           <span className="font-mono text-[var(--text-light)] text-[9px] shrink-0">
                             {formatDuration(s.durationSeconds)}
@@ -612,17 +672,17 @@ export const FocusCalendarView: React.FC = () => {
             {/* Hourly Scrollable Grid Container */}
             <div
               ref={scrollContainerRef}
-              className="w-full max-h-[640px] overflow-y-auto relative flex select-none"
+              className="w-full max-h-[700px] overflow-y-auto relative flex select-none"
             >
               {/* Time labels gutter */}
               <div
                 className="w-14 sm:w-16 shrink-0 border-r border-[var(--border-color)] relative select-none"
-                style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
+                style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
               >
                 {Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => START_HOUR + i).map((hour, idx) => (
                   <div
                     key={hour}
-                    style={{ top: `${idx * HOUR_HEIGHT}px` }}
+                    style={{ top: `${idx * hourHeight}px` }}
                     className="absolute right-2 -translate-y-1/2 text-[11px] font-mono text-[var(--text-light)] pointer-events-none"
                   >
                     <span>{formatHourLabel(hour)}</span>
@@ -642,30 +702,35 @@ export const FocusCalendarView: React.FC = () => {
                     ? new Date(Date.now() - elapsedSeconds * 1000)
                     : null;
                   const activeStartHour = activeStart
-                    ? activeStart.getHours() + activeStart.getMinutes() / 60
+                    ? activeStart.getHours() + activeStart.getMinutes() / 60 + activeStart.getSeconds() / 3600
                     : 0;
                   const liveTop =
                     activeStart &&
-                    Math.max(0, (activeStartHour - START_HOUR) * HOUR_HEIGHT);
+                    Math.max(0, (activeStartHour - START_HOUR) * hourHeight);
                   const liveHeight =
                     activeStart &&
-                    Math.max(26, (Math.max(1, elapsedSeconds) / 3600) * HOUR_HEIGHT);
+                    Math.max(26, (Math.max(1, elapsedSeconds) / 3600) * hourHeight);
 
                   return (
                     <div
                       key={day.toISOString()}
                       className="relative"
-                      style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
+                      style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
                     >
                       {/* Hourly Horizontal Lines & Clickable Slots */}
                       {HOURS.map((hour) => (
                         <div
                           key={hour}
                           onClick={() => handleCellClick(day, hour)}
-                          style={{ height: `${HOUR_HEIGHT}px` }}
-                          className="border-b border-[var(--border-color)]/70 transition-colors cursor-pointer"
+                          style={{ height: `${hourHeight}px` }}
+                          className="border-b border-[var(--border-color)]/70 relative transition-colors cursor-pointer hover:bg-[var(--sidebar-hover-bg)]/20"
                           title={`Click to log time at ${formatHourLabel(hour)}`}
-                        />
+                        >
+                          {/* 30-minute subtle dashed divider line when zoomed in */}
+                          {hourHeight >= 65 && (
+                            <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--border-color)]/30 pointer-events-none" />
+                          )}
+                        </div>
                       ))}
 
                       {/* Current Time Red Indicator Line on Today's column */}
@@ -674,43 +739,45 @@ export const FocusCalendarView: React.FC = () => {
                           className="absolute left-0 right-0 z-30 pointer-events-none flex items-center -translate-y-1/2"
                           style={{ top: `${nowIndicatorTop}px` }}
                         >
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#FF4B4B] -ml-1.25 shrink-0" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#FF4B4B] -ml-1 shrink-0 ring-2 ring-[var(--canvas-bg)]" />
                           <div className="flex-1 h-[2px] bg-[#FF4B4B]" />
                         </div>
                       )}
 
-                      {/* Live Active Session Block */}
+                      {/* Live Active Session Block (Solid, calm, non-flashing) */}
                       {isLiveToday && liveTop !== null && liveHeight !== null && (
                         <div
                           style={{
                             top: `${liveTop}px`,
                             height: `${liveHeight}px`,
-                            borderColor: selectedTag?.color || '#58CC02',
+                            borderLeftColor: selectedTag?.color || '#58CC02',
                           }}
-                          className="absolute left-1 right-1 z-20 rounded-md border-2 border-dashed p-2 flex flex-col justify-between overflow-hidden animate-pulse"
+                          className="absolute left-1 right-1 z-20 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] p-1.5 flex flex-col justify-between overflow-hidden bg-[var(--node-bg)] shadow-xs"
                         >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: selectedTag?.color || '#58CC02' }}
-                            />
-                            <span className="text-[11px] font-bold text-[var(--text-hover)] truncate">
-                              #{selectedTag?.name || 'Focus'}
+                          <div className="flex items-center justify-between gap-1 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: selectedTag?.color || '#58CC02' }}
+                              />
+                              <span className="text-xs font-bold text-[var(--text-hover)] truncate">
+                                {selectedTag?.name || 'Focus'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold text-[var(--text-normal)] shrink-0">
+                              {formatDuration(elapsedSeconds)}
                             </span>
                           </div>
-                          <span className="text-[10px] font-mono font-bold text-[#58CC02]">
-                            ● Live ({Math.floor(elapsedSeconds / 60)}m {elapsedSeconds % 60}s)
-                          </span>
                         </div>
                       )}
 
                       {/* Logged Focus Sessions Blocks */}
                       {daySessions.map((s) => {
                         const start = new Date(s.startedAt);
-                        const startHour = start.getHours() + start.getMinutes() / 60;
-                        const durationHours = s.durationSeconds / 3600;
-                        const top = Math.max(0, (startHour - START_HOUR) * HOUR_HEIGHT);
-                        const height = Math.max(24, durationHours * HOUR_HEIGHT);
+                        const startHour = start.getHours() + start.getMinutes() / 60 + start.getSeconds() / 3600;
+                        const durationHours = Math.max(1, s.durationSeconds) / 3600;
+                        const top = Math.max(0, (startHour - START_HOUR) * hourHeight);
+                        const height = Math.max(26, durationHours * hourHeight);
 
                         const startStr = start.toLocaleTimeString([], {
                           hour: '2-digit',
@@ -730,28 +797,42 @@ export const FocusCalendarView: React.FC = () => {
                               height: `${height}px`,
                               borderLeftColor: s.tagColor,
                             }}
-                            className="absolute left-1 right-1 z-10 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] bg-[var(--node-bg)] shadow-xs hover:border-[var(--text-light)] p-1.5 cursor-pointer transition-all flex flex-col justify-between overflow-hidden group"
+                            className="absolute left-1 right-1 z-10 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] bg-[var(--node-bg)] shadow-xs hover:border-[var(--text-light)] p-1.5 cursor-pointer transition-all overflow-hidden group"
                           >
-                            <div className="flex items-start justify-between gap-1 min-w-0">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
+                            {height < 46 ? (
+                              <div className="flex items-center justify-between gap-1 min-w-0 h-full">
+                                <div className="flex items-center gap-1.5 min-w-0">
                                   <span
                                     className="w-2 h-2 rounded-full shrink-0"
                                     style={{ backgroundColor: s.tagColor }}
                                   />
-                                  <span className="text-xs font-bold text-[var(--text-hover)] truncate block leading-tight">
-                                    #{s.tagName}
+                                  <span className="text-xs font-bold text-[var(--text-hover)] truncate block leading-none">
+                                    {s.tagName}
                                   </span>
                                 </div>
+                                <span className="text-[10px] font-mono font-bold text-[var(--text-normal)] shrink-0">
+                                  {formatDuration(s.durationSeconds)}
+                                </span>
                               </div>
-                              <span className="text-[10px] font-mono font-bold text-[var(--text-normal)] shrink-0">
-                                {formatDuration(s.durationSeconds)}
-                              </span>
-                            </div>
-
-                            {height >= 48 && (
-                              <div className="text-[10px] font-mono text-[var(--text-light)] pt-0.5">
-                                {startStr} - {endStr}
+                            ) : (
+                              <div className="flex flex-col justify-between h-full">
+                                <div className="flex items-start justify-between gap-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span
+                                      className="w-2 h-2 rounded-full shrink-0"
+                                      style={{ backgroundColor: s.tagColor }}
+                                    />
+                                    <span className="text-xs font-bold text-[var(--text-hover)] truncate block leading-tight">
+                                      {s.tagName}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-[var(--text-normal)] shrink-0">
+                                    {formatDuration(s.durationSeconds)}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] font-mono text-[var(--text-light)] pt-0.5">
+                                  {startStr} - {endStr}
+                                </div>
                               </div>
                             )}
                           </div>

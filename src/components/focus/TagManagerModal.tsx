@@ -99,7 +99,7 @@ export const TagManagerModal: React.FC<TagManagerModalProps> = ({ isOpen, onClos
                             : TAG_COLORS[(tags.length + i) % TAG_COLORS.length],
                       }}
                     />
-                    #{name}
+                    {name}
                   </span>
                 ))}
               </div>
@@ -196,7 +196,7 @@ export const TagManagerModal: React.FC<TagManagerModalProps> = ({ isOpen, onClos
                   </div>
 
                   <span className="font-medium text-[var(--text-normal)] truncate">
-                    #{tag.name}
+                    {tag.name}
                   </span>
                 </div>
 

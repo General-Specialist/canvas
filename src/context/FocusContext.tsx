@@ -81,22 +81,22 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     playFocusSound('complete');
 
     const duration = Math.max(1, elapsedSeconds);
+    const currentActiveTag = tags.find((t) => t.id === selectedTagId) || tags[0];
+    const endTimestamp = Date.now();
+    const startTimestamp = endTimestamp - duration * 1000;
 
-    if (duration >= 5) { // Only log if focused for at least 5 seconds
-      const currentActiveTag = tags.find((t) => t.id === selectedTagId) || tags[0];
-      const newSession: FocusSession = {
-        id: `session-${Date.now()}`,
-        tagId: currentActiveTag.id,
-        tagName: currentActiveTag.name,
-        tagColor: currentActiveTag.color,
-        durationSeconds: duration,
-        mode: 'stopwatch',
-        startedAt: sessionStartTimeRef.current,
-        endedAt: Date.now(),
-      };
+    const newSession: FocusSession = {
+      id: `session-${endTimestamp}`,
+      tagId: currentActiveTag.id,
+      tagName: currentActiveTag.name,
+      tagColor: currentActiveTag.color,
+      durationSeconds: duration,
+      mode: 'stopwatch',
+      startedAt: startTimestamp,
+      endedAt: endTimestamp,
+    };
 
-      setSessions((prev) => [newSession, ...prev]);
-    }
+    setSessions((prev) => [newSession, ...prev]);
 
     setIsRunning(false);
     setIsPaused(false);
