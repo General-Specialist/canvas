@@ -1,12 +1,13 @@
-import { Canvas } from './components/Canvas';
+import { JarvisShell } from './components/shell/JarvisShell';
 import { ThemeProvider } from './context/ThemeContext';
+import { FocusProvider } from './context/FocusContext';
 
 function App() {
   return (
     <ThemeProvider>
-      <main className="w-screen h-screen overflow-hidden bg-[var(--canvas-bg)] text-[var(--text-normal)] transition-colors duration-200">
-        <Canvas />
-      </main>
+      <FocusProvider>
+        <JarvisShell />
+      </FocusProvider>
     </ThemeProvider>
   );
 }

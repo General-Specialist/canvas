@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Infinite Canvas",
+  "productName": "Jarvis",
   "version": "0.1.0",
-  "identifier": "com.canvas.desktop",
+  "identifier": "com.jarvis.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Infinite Canvas",
+        "title": "Jarvis",
         "width": 1400,
         "height": 900,
         "resizable": true

@@ -1,0 +1,316 @@
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { FocusSession, FocusTag, FocusTimerMode, TAG_COLORS } from '../types/focus';
+import {
+  loadSavedSessions,
+  loadSavedTags,
+  playFocusSound,
+  saveSessions,
+  saveTags,
+} from '../utils/focusStorage';
+
+interface FocusContextType {
+  tags: FocusTag[];
+  selectedTagId: string;
+  sessions: FocusSession[];
+  mode: FocusTimerMode;
+  selectedMinutes: number;
+  timeLeft: number;
+  elapsedSeconds: number;
+  isRunning: boolean;
+  isPaused: boolean;
+  taskTitle: string;
+  selectedTag: FocusTag | undefined;
+  startTimer: () => void;
+  pauseTimer: () => void;
+  resumeTimer: () => void;
+  resetTimer: () => void;
+  finishSession: () => void;
+  setMode: (mode: FocusTimerMode) => void;
+  setSelectedMinutes: (mins: number) => void;
+  setCustomDuration: (seconds: number) => void;
+  setSelectedTagId: (id: string) => void;
+  setTaskTitle: (title: string) => void;
+  createTag: (name: string, color?: string) => void;
+  createMultipleTags: (names: string[], baseColor?: string) => void;
+  updateTag: (id: string, partial: Partial<FocusTag>) => void;
+  deleteTag: (id: string) => void;
+  deleteSession: (id: string) => void;
+  clearAllSessions: () => void;
+  restartSession: (session: FocusSession) => void;
+  addManualSession: (data: {
+    tagId: string;
+    taskTitle: string;
+    startedAt: number;
+    endedAt: number;
+  }) => void;
+  updateSession: (id: string, partial: Partial<FocusSession>) => void;
+}
+
+const FocusContext = createContext<FocusContextType | undefined>(undefined);
+
+export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [tags, setTags] = useState<FocusTag[]>(loadSavedTags);
+  const [selectedTagId, setSelectedTagId] = useState<string>(() => loadSavedTags()[0]?.id || 'tag-coding');
+  const [sessions, setSessions] = useState<FocusSession[]>(loadSavedSessions);
+
+  const [mode] = useState<FocusTimerMode>('stopwatch');
+  const [selectedMinutes] = useState<number>(25);
+  const [timeLeft] = useState<number>(25 * 60);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [taskTitle, setTaskTitle] = useState<string>('');
+
+  const timerRef = useRef<number | null>(null);
+  const sessionStartTimeRef = useRef<number>(Date.now());
+
+  // Save tags & sessions whenever they change
+  useEffect(() => {
+    saveTags(tags);
+  }, [tags]);
+
+  useEffect(() => {
+    saveSessions(sessions);
+  }, [sessions]);
+
+  const selectedTag = tags.find((t) => t.id === selectedTagId) || tags[0];
+
+  const setMode = useCallback(() => {}, []);
+  const setSelectedMinutes = useCallback(() => {}, []);
+  const setCustomDuration = useCallback(() => {}, []);
+
+  const finishSession = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    playFocusSound('complete');
+
+    const duration = Math.max(1, elapsedSeconds);
+
+    if (duration >= 5) { // Only log if focused for at least 5 seconds
+      const currentActiveTag = tags.find((t) => t.id === selectedTagId) || tags[0];
+      const newSession: FocusSession = {
+        id: `session-${Date.now()}`,
+        tagId: currentActiveTag.id,
+        tagName: currentActiveTag.name,
+        tagColor: currentActiveTag.color,
+        taskTitle: taskTitle.trim() || `${currentActiveTag.name} Session`,
+        durationSeconds: duration,
+        mode: 'stopwatch',
+        startedAt: sessionStartTimeRef.current,
+        endedAt: Date.now(),
+      };
+
+      setSessions((prev) => [newSession, ...prev]);
+    }
+
+    setIsRunning(false);
+    setIsPaused(false);
+    setElapsedSeconds(0);
+  }, [elapsedSeconds, tags, selectedTagId, taskTitle]);
+
+  // Main stopwatch tick
+  useEffect(() => {
+    if (isRunning && !isPaused) {
+      timerRef.current = window.setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isRunning, isPaused]);
+
+  const startTimer = useCallback(() => {
+    playFocusSound('start');
+    sessionStartTimeRef.current = Date.now();
+    setIsRunning(true);
+    setIsPaused(false);
+  }, []);
+
+  const pauseTimer = useCallback(() => {
+    setIsPaused(true);
+  }, []);
+
+  const resumeTimer = useCallback(() => {
+    setIsPaused(false);
+  }, []);
+
+  const resetTimer = useCallback(() => {
+    setIsRunning(false);
+    setIsPaused(false);
+    setElapsedSeconds(0);
+  }, []);
+
+  const createTag = useCallback((name: string, color?: string) => {
+    if (!name.trim()) return;
+    const newTag: FocusTag = {
+      id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      name: name.trim().replace(/^#/, ''),
+      color: color || TAG_COLORS[tags.length % TAG_COLORS.length],
+      createdAt: Date.now(),
+    };
+    setTags((prev) => [...prev, newTag]);
+    setSelectedTagId(newTag.id);
+  }, [tags.length]);
+
+  const createMultipleTags = useCallback((names: string[], baseColor?: string) => {
+    const validNames = names
+      .map((n) => n.trim().replace(/^#/, ''))
+      .filter(Boolean);
+    if (validNames.length === 0) return;
+
+    setTags((prev) => {
+      let colorIndex = prev.length;
+      const newTags: FocusTag[] = validNames.map((name, i) => ({
+        id: `tag-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
+        name,
+        color: (i === 0 && baseColor) ? baseColor : TAG_COLORS[(colorIndex + i) % TAG_COLORS.length],
+        createdAt: Date.now() + i,
+      }));
+      if (newTags.length > 0) {
+        setSelectedTagId(newTags[0].id);
+      }
+      return [...prev, ...newTags];
+    });
+  }, []);
+
+  const updateTag = useCallback((id: string, partial: Partial<FocusTag>) => {
+    setTags((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...partial } : t))
+    );
+    if (partial.color || partial.name) {
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.tagId === id) {
+            return {
+              ...s,
+              tagColor: partial.color ?? s.tagColor,
+              tagName: partial.name ?? s.tagName,
+            };
+          }
+          return s;
+        })
+      );
+    }
+  }, []);
+
+  const deleteTag = useCallback((id: string) => {
+    setTags((prev) => prev.filter((t) => t.id !== id));
+    if (selectedTagId === id) {
+      const remaining = tags.filter((t) => t.id !== id);
+      if (remaining.length > 0) setSelectedTagId(remaining[0].id);
+    }
+  }, [selectedTagId, tags]);
+
+  const deleteSession = useCallback((id: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const clearAllSessions = useCallback(() => {
+    setSessions([]);
+  }, []);
+
+  const restartSession = useCallback((session: FocusSession) => {
+    setSelectedTagId(session.tagId);
+    setTaskTitle(session.taskTitle);
+    setElapsedSeconds(0);
+    setIsRunning(true);
+    setIsPaused(false);
+    sessionStartTimeRef.current = Date.now();
+    playFocusSound('start');
+  }, []);
+
+  const addManualSession = useCallback((data: {
+    tagId: string;
+    taskTitle: string;
+    startedAt: number;
+    endedAt: number;
+  }) => {
+    const targetTag = tags.find((t) => t.id === data.tagId) || tags[0];
+    const duration = Math.max(1, Math.round((data.endedAt - data.startedAt) / 1000));
+    const newSession: FocusSession = {
+      id: `session-${Date.now()}`,
+      tagId: targetTag.id,
+      tagName: targetTag.name,
+      tagColor: targetTag.color,
+      taskTitle: data.taskTitle.trim() || `${targetTag.name} Session`,
+      durationSeconds: duration,
+      mode: 'countdown',
+      startedAt: data.startedAt,
+      endedAt: data.endedAt,
+    };
+    setSessions((prev) => [newSession, ...prev]);
+  }, [tags]);
+
+  const updateSession = useCallback((id: string, partial: Partial<FocusSession>) => {
+    setSessions((prev) =>
+      prev.map((s) => {
+        if (s.id !== id) return s;
+        const updated = { ...s, ...partial };
+        if (partial.tagId) {
+          const targetTag = tags.find((t) => t.id === partial.tagId);
+          if (targetTag) {
+            updated.tagName = targetTag.name;
+            updated.tagColor = targetTag.color;
+          }
+        }
+        if (partial.startedAt || partial.endedAt) {
+          const start = partial.startedAt ?? s.startedAt;
+          const end = partial.endedAt ?? s.endedAt;
+          updated.durationSeconds = Math.max(1, Math.round((end - start) / 1000));
+        }
+        return updated;
+      })
+    );
+  }, [tags]);
+
+  return (
+    <FocusContext.Provider
+      value={{
+        tags,
+        selectedTagId,
+        sessions,
+        mode,
+        selectedMinutes,
+        timeLeft,
+        elapsedSeconds,
+        isRunning,
+        isPaused,
+        taskTitle,
+        selectedTag,
+        startTimer,
+        pauseTimer,
+        resumeTimer,
+        resetTimer,
+        finishSession,
+        setMode,
+        setSelectedMinutes,
+        setCustomDuration,
+        setSelectedTagId,
+        setTaskTitle,
+        createTag,
+        createMultipleTags,
+        updateTag,
+        deleteTag,
+        deleteSession,
+        clearAllSessions,
+        restartSession,
+        addManualSession,
+        updateSession,
+      }}
+    >
+      {children}
+    </FocusContext.Provider>
+  );
+};
+
+export const useFocus = (): FocusContextType => {
+  const context = useContext(FocusContext);
+  if (!context) {
+    throw new Error('useFocus must be used within a FocusProvider');
+  }
+  return context;
+};

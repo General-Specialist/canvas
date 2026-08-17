@@ -35,22 +35,22 @@
 :root,
 [data-theme="dark"] {
   /* Dark Theme Mappings using Duolingo Neutrals & Brand Colors */
-  --canvas-bg: #1B2129;
-  --sidebar-bg: var(--duo-eel);
-  --icon-hover-bg: #3A3A3A;
-  --border-color: #383838;
-  --sidebar-hover-bg: #3D3D3D;
-  --text-light: var(--duo-hare);
-  --text-normal: var(--duo-polar);
-  --text-hover: var(--duo-snow);
+  --canvas-bg: #0F1F24;
+  --sidebar-bg: #0F1F24;
+  --icon-hover-bg: #1B2B31;
+  --border-color: #243740;
+  --sidebar-hover-bg: #1B2B31;
+  --text-light: #8E9BA0;
+  --text-normal: #E5E5E5;
+  --text-hover: #FFFFFF;
 
-  --node-bg: #262D37;
-  --node-border: #3A4350;
+  --node-bg: #15272D;
+  --node-border: #243740;
   --node-hover-ring: var(--duo-mask-green);
   --node-selected-ring: var(--duo-feather-green);
   --handle-bg: var(--duo-feather-green);
   --handle-border: var(--duo-snow);
-  --edge-stroke: var(--duo-wolf);
+  --edge-stroke: #37464F;
   --edge-stroke-selected: var(--duo-feather-green);
   --wikilink-color: var(--duo-macaw);
   --wikilink-hover: var(--duo-beetle);
@@ -198,5 +198,20 @@
 
 .katex-display > .katex {
   white-space: normal;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
