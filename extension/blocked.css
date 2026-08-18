@@ -1,6 +1,7 @@
 :root {
   --bg-color: #0e0e0e;
   --text-color: #e5e7eb;
+  --text-muted: #9ca3af;
 }
 
 * {
@@ -26,52 +27,42 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.25s ease-out;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
-.message {
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.5px;
-  color: #d1d5db;
-  margin-bottom: 24px;
-}
-
-.unblock-btn {
-  display: inline-flex;
+.icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(88, 204, 2, 0.1);
+  border: 1px solid rgba(88, 204, 2, 0.25);
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 22px;
-  background-color: #58cc02;
-  color: #000;
-  border: none;
-  border-radius: 12px;
-  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.message {
+  font-size: 26px;
   font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 0 #46a302;
-  transition: all 0.15s ease;
+  letter-spacing: -0.5px;
+  color: #f3f4f6;
+  margin-bottom: 10px;
 }
 
-.unblock-btn:hover {
-  filter: brightness(1.08);
-}
-
-.unblock-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0 #46a302;
-}
-
-.unblock-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
 }

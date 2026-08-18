@@ -1,75 +1,44 @@
 const dotEl = document.getElementById('dot');
-const tagPillEl = document.getElementById('tagPill');
-const timerValEl = document.getElementById('timerVal');
-const modeValEl = document.getElementById('modeVal');
+const statusValEl = document.getElementById('statusVal');
 const countValEl = document.getElementById('countVal');
-const btn5m = document.getElementById('btn5m');
-const btn15m = document.getElementById('btn15m');
-const btnToggle = document.getElementById('btnToggle');
+const unblockedSection = document.getElementById('unblockedSection');
+const unblockedItems = document.getElementById('unblockedItems');
 
 function updateUI() {
   if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendMessage) {
     browser.runtime.sendMessage({ type: 'GET_FOCUS_STATE' }, (res) => {
       if (res && res.state) {
         const st = res.state;
-        const isRunning = st.isRunning && !st.isPaused;
         const activeSites = Object.keys(st.activeSiteStopwatches || {});
+        const blockedCount = st.blockedDomains?.length || 0;
 
-        tagPillEl.textContent = '#' + (st.selectedTagName || 'Focus');
-        tagPillEl.style.backgroundColor = st.selectedTagColor || '#58cc02';
-
-        if (activeSites.length > 0) {
-          timerValEl.textContent = `Unblocked (${activeSites.length})`;
-          timerValEl.style.color = '#58cc02';
-        } else {
-          timerValEl.textContent = isRunning ? `Active (${st.elapsedSeconds}s)` : 'Stopped';
-          timerValEl.style.color = isRunning ? '#58cc02' : '#f3f4f6';
-        }
-
-        modeValEl.textContent = st.blockingMode === 'unlock_on_timer' ? 'Unlock on Timer' : 'Lock on Timer';
-        countValEl.textContent = `${st.blockedDomains?.length || 0} sites`;
+        countValEl.textContent = `${blockedCount} site${blockedCount === 1 ? '' : 's'}`;
 
         if (!st.blockingEnabled) {
           dotEl.style.background = '#777777';
-          btnToggle.textContent = 'Enable Blocker';
-          btnToggle.style.color = '#58cc02';
-        } else if (activeSites.length > 0 || isRunning) {
+          statusValEl.textContent = 'Disabled';
+          statusValEl.style.color = '#777777';
+          unblockedSection.style.display = 'none';
+        } else if (activeSites.length > 0) {
           dotEl.style.background = '#58cc02';
-          btnToggle.textContent = 'Disable Blocker';
-          btnToggle.style.color = '#ff4b4b';
+          statusValEl.textContent = `Unblocked (${activeSites.length})`;
+          statusValEl.style.color = '#58cc02';
+
+          unblockedSection.style.display = 'flex';
+          unblockedItems.innerHTML = activeSites
+            .map((site) => `<div class="unblocked-item"><span>●</span> ${site}</div>`)
+            .join('');
         } else {
-          dotEl.style.background = '#ff4b4b';
-          btnToggle.textContent = 'Disable Blocker';
-          btnToggle.style.color = '#ff4b4b';
+          dotEl.style.background = '#58cc02';
+          statusValEl.textContent = 'Locked (Active)';
+          statusValEl.style.color = '#ff4b4b';
+          unblockedSection.style.display = 'none';
         }
       }
     });
   }
 }
 
-btn5m.addEventListener('click', () => {
-  if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendMessage) {
-    browser.runtime.sendMessage({ type: 'TEMP_UNLOCK', minutes: 5 }, () => {
-      window.close();
-    });
-  }
-});
-
-btn15m.addEventListener('click', () => {
-  if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendMessage) {
-    browser.runtime.sendMessage({ type: 'TEMP_UNLOCK', minutes: 15 }, () => {
-      window.close();
-    });
-  }
-});
-
-btnToggle.addEventListener('click', () => {
-  if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendMessage) {
-    browser.runtime.sendMessage({ type: 'TOGGLE_ENABLED' }, () => {
-      updateUI();
-    });
-  }
-});
-
 updateUI();
 setInterval(updateUI, 1000);
+

@@ -39,7 +39,14 @@ const syncToTauriBridge = async (payload: {
     const { invoke } = await import('@tauri-apps/api/core');
     await invoke('update_focus_state', { newState: payload });
   } catch {
-    // If not in Tauri or during initial load, fallback gracefully
+    // If not in Tauri or during initial load, fallback to HTTP sync
+    try {
+      await fetch('http://127.0.0.1:43210/api/sync-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch {}
   }
 };
 
@@ -338,6 +345,23 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const startTimestamp = startedAt || endedAt - 1000;
       const duration = Math.max(1, Math.round((endedAt - startTimestamp) / 1000));
 
+      // Remove stopwatch from activeSiteStopwatches (re-locks the website)
+      setBlockerConfig((prev) => {
+        const copy = { ...(prev.activeSiteStopwatches || {}) };
+        delete copy[cleanedHost];
+        delete copy[rawDomain];
+        delete copy[domain];
+        return {
+          ...prev,
+          activeSiteStopwatches: copy,
+        };
+      });
+
+      // If open for less than 1 minute (< 60s), do not record the session in the app
+      if (duration < 60) {
+        return;
+      }
+
       // 1. Resolve existing tag or create a new clean tag (without .com)
       let targetTag = tags.find((t) => {
         const tLower = t.name.toLowerCase().trim();
@@ -388,18 +412,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       setSessions((prev) => [newSession, ...prev]);
       playFocusSound('complete');
-
-      // 3. Remove stopwatch from activeSiteStopwatches
-      setBlockerConfig((prev) => {
-        const copy = { ...(prev.activeSiteStopwatches || {}) };
-        delete copy[cleanedHost];
-        delete copy[rawDomain];
-        delete copy[domain];
-        return {
-          ...prev,
-          activeSiteStopwatches: copy,
-        };
-      });
     },
     [tags, blockerConfig.activeSiteStopwatches]
   );

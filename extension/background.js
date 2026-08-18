@@ -11,7 +11,6 @@ let focusState = {
   elapsedSeconds: 0,
   mode: 'stopwatch',
   blockingEnabled: true,
-  blockingMode: 'unlock_on_timer', // 'unlock_on_timer' | 'block_on_timer'
   blockedDomains: [
     'youtube.com',
     'twitter.com',
@@ -23,7 +22,6 @@ let focusState = {
     'twitch.tv',
     'netflix.com',
   ],
-  unlockedUntil: null,
   activeSiteStopwatches: {},
   lastUpdated: Date.now(),
 };
@@ -38,6 +36,7 @@ if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) 
   browser.storage.local.get('focusState').then((res) => {
     if (res && res.focusState) {
       focusState = { ...focusState, ...res.focusState };
+      updateBadge();
     }
   }).catch(() => {});
 }
@@ -87,39 +86,13 @@ function updateBadge() {
     return;
   }
 
-  const isTempUnlocked = focusState.unlockedUntil && focusState.unlockedUntil > Date.now();
-  if (isTempUnlocked) {
-    browser.browserAction.setBadgeText({ text: 'PASS' });
-    browser.browserAction.setBadgeBackgroundColor({ color: '#1CB0F6' });
-    return;
-  }
-
-  const isTimerActive = focusState.isRunning && !focusState.isPaused;
-  const hasSiteStopwatch = Object.keys(focusState.activeSiteStopwatches || {}).length > 0;
-
-  if (hasSiteStopwatch) {
-    browser.browserAction.setBadgeText({ text: 'FREE' });
+  const activeCount = Object.keys(focusState.activeSiteStopwatches || {}).length;
+  if (activeCount > 0) {
+    browser.browserAction.setBadgeText({ text: `${activeCount}` });
     browser.browserAction.setBadgeBackgroundColor({ color: '#58CC02' });
-    return;
-  }
-
-  if (focusState.blockingMode === 'unlock_on_timer') {
-    if (isTimerActive) {
-      browser.browserAction.setBadgeText({ text: 'ON' });
-      browser.browserAction.setBadgeBackgroundColor({ color: '#58CC02' });
-    } else {
-      browser.browserAction.setBadgeText({ text: 'LOCK' });
-      browser.browserAction.setBadgeBackgroundColor({ color: '#FF4B4B' });
-    }
   } else {
-    // block_on_timer mode
-    if (isTimerActive) {
-      browser.browserAction.setBadgeText({ text: 'LOCK' });
-      browser.browserAction.setBadgeBackgroundColor({ color: '#FF4B4B' });
-    } else {
-      browser.browserAction.setBadgeText({ text: 'FREE' });
-      browser.browserAction.setBadgeBackgroundColor({ color: '#58CC02' });
-    }
+    browser.browserAction.setBadgeText({ text: 'LOCK' });
+    browser.browserAction.setBadgeBackgroundColor({ color: '#FF4B4B' });
   }
 }
 
@@ -190,7 +163,7 @@ async function pollStatus() {
   }
 }
 
-// Check domain match against list
+// Check domain match against blocked list
 function matchDomain(hostname, fullUrl) {
   if (!hostname || !focusState.blockedDomains || !Array.isArray(focusState.blockedDomains)) return null;
   const host = hostname.toLowerCase();
@@ -230,14 +203,11 @@ function matchDomain(hostname, fullUrl) {
 }
 
 // Determine whether a domain should be blocked
+// Rule: Unless explicitly unblocked via an active site stopwatch in the Jarvis app,
+// websites in blockedDomains ALWAYS stay blocked.
 function isDomainBlocked(urlStr) {
   if (!urlStr) return false;
   if (!focusState.blockingEnabled) return false;
-
-  // Check temporary pass
-  if (focusState.unlockedUntil && focusState.unlockedUntil > Date.now()) {
-    return false;
-  }
 
   try {
     const url = new URL(urlStr);
@@ -248,7 +218,7 @@ function isDomainBlocked(urlStr) {
     const matched = matchDomain(url.hostname, urlStr);
     if (!matched) return false;
 
-    // Check if this website has an active running stopwatch in Jarvis!
+    // Check if this website has an active running stopwatch in Jarvis (unblocked from app)
     const stopwatches = focusState.activeSiteStopwatches || {};
     const cleanMatched = normalizeDomain(matched);
     const cleanHost = normalizeDomain(url.hostname);
@@ -264,17 +234,11 @@ function isDomainBlocked(urlStr) {
     });
 
     if (isStopwatchRunning) {
-      return false; // Stopwatch is active -> Unlocked!
+      return false; // Stopwatch active -> Unlocked!
     }
 
-    // Also check global timer if in unlock_on_timer mode
-    const isTimerActive = focusState.isRunning && !focusState.isPaused;
-    if (focusState.blockingMode === 'unlock_on_timer') {
-      return !isTimerActive;
-    } else {
-      return isTimerActive;
-    }
-
+    // Otherwise, always stay blocked
+    return true;
   } catch {
     return false;
   }
@@ -297,7 +261,7 @@ browser.webRequest.onBeforeRequest.addListener(
         hostname = new URL(url).hostname;
       } catch {}
 
-      const redirectUrl = `${blockerUrl}?target=${encodeURIComponent(url)}&domain=${encodeURIComponent(hostname)}&mode=${encodeURIComponent(focusState.blockingMode)}&tag=${encodeURIComponent(focusState.selectedTagName || 'Focus')}&color=${encodeURIComponent(focusState.selectedTagColor || '#58CC02')}`;
+      const redirectUrl = `${blockerUrl}?target=${encodeURIComponent(url)}&domain=${encodeURIComponent(hostname)}&tag=${encodeURIComponent(focusState.selectedTagName || 'Focus')}&color=${encodeURIComponent(focusState.selectedTagColor || '#58CC02')}`;
       return { redirectUrl };
     }
 
@@ -340,7 +304,7 @@ async function blockRestrictedTabs() {
           try {
             hostname = new URL(tab.url).hostname;
           } catch {}
-          const redirectUrl = `${blockerUrl}?target=${encodeURIComponent(tab.url)}&domain=${encodeURIComponent(hostname)}&mode=${encodeURIComponent(focusState.blockingMode)}&tag=${encodeURIComponent(focusState.selectedTagName || 'Focus')}&color=${encodeURIComponent(focusState.selectedTagColor || '#58CC02')}`;
+          const redirectUrl = `${blockerUrl}?target=${encodeURIComponent(tab.url)}&domain=${encodeURIComponent(hostname)}&tag=${encodeURIComponent(focusState.selectedTagName || 'Focus')}&color=${encodeURIComponent(focusState.selectedTagColor || '#58CC02')}`;
           browser.tabs.update(tab.id, { url: redirectUrl });
         }
       }
@@ -360,45 +324,6 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'CHECK_URL_BLOCKED' || message.type === 'IS_BLOCKED') {
     const url = message.url || '';
     sendResponse({ blocked: isDomainBlocked(url) });
-    return true;
-  }
-
-  if (message.type === 'TEMP_UNLOCK') {
-    const minutes = message.minutes || 5;
-    focusState.unlockedUntil = Date.now() + minutes * 60 * 1000;
-    updateBadge();
-    reloadBlockedTabs();
-    sendResponse({ success: true, unlockedUntil: focusState.unlockedUntil });
-    return true;
-  }
-
-  if (message.type === 'START_SITE_STOPWATCH') {
-    const domain = normalizeDomain(message.domain);
-    if (domain) {
-      focusState.activeSiteStopwatches = focusState.activeSiteStopwatches || {};
-      focusState.activeSiteStopwatches[domain] = Date.now();
-      updateState(focusState);
-      sendResponse({ success: true, activeSiteStopwatches: focusState.activeSiteStopwatches });
-    }
-    return true;
-  }
-
-  if (message.type === 'STOP_SITE_STOPWATCH') {
-    const domain = normalizeDomain(message.domain);
-    if (domain && focusState.activeSiteStopwatches) {
-      delete focusState.activeSiteStopwatches[domain];
-      updateState(focusState);
-      sendResponse({ success: true, activeSiteStopwatches: focusState.activeSiteStopwatches });
-    }
-    return true;
-  }
-
-  if (message.type === 'TOGGLE_ENABLED') {
-    focusState.blockingEnabled = !focusState.blockingEnabled;
-    updateBadge();
-    reloadBlockedTabs();
-    blockRestrictedTabs();
-    sendResponse({ success: true, enabled: focusState.blockingEnabled });
     return true;
   }
 });

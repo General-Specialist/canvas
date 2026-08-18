@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jarvis Focus</title>
+  <title>Jarvis Focus Blocker</title>
   <style>
     :root {
-      --bg: #181818;
-      --card: #222222;
-      --border: #333333;
+      --bg: #141414;
+      --card: #1f1f1f;
+      --border: #2e2e2e;
       --text: #f3f4f6;
       --muted: #9ca3af;
       --green: #58cc02;
-      --blue: #1cb0f6;
       --red: #ff4b4b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      width: 260px;
+      width: 250px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
@@ -34,7 +33,7 @@
       font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
     }
     .status-dot {
       width: 8px;
@@ -46,12 +45,12 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 10px;
+      padding: 10px 12px;
       margin-bottom: 10px;
       font-size: 12px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
     .row {
       display: flex;
@@ -60,40 +59,27 @@
     }
     .label { color: var(--muted); }
     .val { font-weight: 600; }
-    .tag {
-      font-size: 10px;
-      font-weight: 700;
-      color: #fff;
-      background: var(--green);
-      padding: 1px 6px;
-      border-radius: 4px;
+    .unblocked-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
     }
-    .btn-group {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-    }
-    button {
-      padding: 7px 10px;
-      border-radius: 8px;
+    .unblocked-item {
       font-size: 11px;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    button:hover {
-      background: #2a2a2a;
-      border-color: var(--muted);
-    }
-    .btn-toggle {
-      width: 100%;
-      margin-top: 6px;
-      background: rgba(88, 204, 2, 0.15);
-      border-color: rgba(88, 204, 2, 0.3);
       color: var(--green);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .footer-note {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.4;
+      padding-top: 4px;
     }
   </style>
 </head>
@@ -101,32 +87,28 @@
   <div class="header">
     <div class="title">
       <div class="status-dot" id="dot"></div>
-      Jarvis Focus
+      Jarvis Focus Blocker
     </div>
-    <span class="tag" id="tagPill">#Coding</span>
   </div>
 
   <div class="card">
     <div class="row">
-      <span class="label">Timer</span>
-      <span class="val" id="timerVal">Stopped</span>
+      <span class="label">Status</span>
+      <span class="val" id="statusVal" style="color: var(--red);">Locked</span>
     </div>
     <div class="row">
-      <span class="label">Mode</span>
-      <span class="val" id="modeVal">Unlock on Timer</span>
+      <span class="label">Blocked Websites</span>
+      <span class="val" id="countVal">0</span>
     </div>
-    <div class="row">
-      <span class="label">Blocked Sites</span>
-      <span class="val" id="countVal">9 sites</span>
+    <div class="unblocked-list" id="unblockedSection" style="display: none;">
+      <span class="label" style="font-size: 10px; text-transform: uppercase;">Active Unblocks:</span>
+      <div id="unblockedItems"></div>
     </div>
   </div>
 
-  <div class="btn-group">
-    <button id="btn5m">+5m Break</button>
-    <button id="btn15m">+15m Break</button>
-  </div>
-
-  <button class="btn-toggle" id="btnToggle">Toggle Blocker</button>
+  <p class="footer-note">
+    Unblock &amp; manage websites directly from the Jarvis app.
+  </p>
 
   <script src="popup.js"></script>
 </body>

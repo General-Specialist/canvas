@@ -215,6 +215,11 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Helper Note */}
+          <div className="pt-2 text-[11px] text-[var(--text-light)]/70 text-center border-t border-[var(--border-color)]">
+            Websites stay blocked until unblocked here. Sessions under 1 minute are not recorded.
+          </div>
         </div>
       </div>
     </div>

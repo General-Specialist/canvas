@@ -1,10 +1,8 @@
-// Blocked Page Script - Auto-redirects when website is unblocked
+// Blocked Page Script - Auto-redirects when website is unblocked in the Jarvis app
 (function () {
   const params = new URLSearchParams(window.location.search);
   const targetUrl = params.get('target');
   const domainParam = params.get('domain');
-
-  const btnUnblock = document.getElementById('btnUnblock');
 
   function getDomain() {
     if (domainParam) return domainParam;
@@ -19,7 +17,7 @@
   function checkAndRedirect() {
     if (!targetUrl) return;
 
-    // Check with background script
+    // 1. Check with background script
     if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendMessage) {
       browser.runtime.sendMessage(
         { type: 'CHECK_URL_BLOCKED', url: targetUrl },
@@ -32,7 +30,7 @@
       );
     }
 
-    // Secondary direct check to local bridge server
+    // 2. Direct check to local bridge server
     fetch('http://127.0.0.1:43210/status')
       .then((res) => res.json())
       .then((state) => {
@@ -45,63 +43,13 @@
           return cleanSite === targetHost || targetHost.endsWith('.' + cleanSite);
         });
 
-        const isTimerActive = state.isRunning && !state.isPaused;
-        const isModeUnlock = state.blockingMode === 'unlock_on_timer';
-        const isTempUnlocked = state.unlockedUntil && state.unlockedUntil > Date.now();
-        const isBlockedInList = (state.blockedDomains || []).some((item) => {
-          const cleanItem = item.toLowerCase().replace(/^www\./, '').replace(/^m\./, '');
-          return cleanItem === targetHost || targetHost.endsWith('.' + cleanItem);
-        });
-
-        const isBlocked =
-          state.blockingEnabled &&
-          isBlockedInList &&
-          !isTempUnlocked &&
-          !isStopwatchActive &&
-          (!isModeUnlock ? isTimerActive : !isTimerActive);
-
-        if (!isBlocked) {
+        // If stopwatch is actively running in the Jarvis app, redirect to target
+        if (isStopwatchActive) {
           console.log('[Jarvis Focus] Target unblocked via server check, redirecting:', targetUrl);
           window.location.replace(targetUrl);
         }
       })
       .catch(() => {});
-  }
-
-  // Handle Unblock Button Click
-  if (btnUnblock) {
-    btnUnblock.addEventListener('click', async () => {
-      btnUnblock.disabled = true;
-      btnUnblock.textContent = 'Unlocking...';
-
-      const domain = getDomain();
-
-      // 1. Notify background script
-      if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendMessage) {
-        browser.runtime.sendMessage({
-          type: 'START_SITE_STOPWATCH',
-          domain,
-        });
-      }
-
-      // 2. Direct call to Jarvis Bridge Server
-      try {
-        await fetch('http://127.0.0.1:43210/api/start-stopwatch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domain }),
-        });
-      } catch (err) {
-        console.warn('[Jarvis Blocker] Direct server call warning:', err);
-      }
-
-      // 3. Redirect immediately
-      setTimeout(() => {
-        if (targetUrl) {
-          window.location.replace(targetUrl);
-        }
-      }, 200);
-    });
   }
 
   // Check immediately on load
@@ -117,6 +65,6 @@
   }
 
   // Check periodically while page is open
-  const interval = setInterval(checkAndRedirect, 600);
+  const interval = setInterval(checkAndRedirect, 500);
   window.addEventListener('beforeunload', () => clearInterval(interval));
 })();
