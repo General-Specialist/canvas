@@ -19,16 +19,7 @@ export interface GroupNodeData {
   [key: string]: unknown;
 }
 
-export interface DocumentNodeData {
-  title: string;
-  content: string;
-  fontFamily?: 'sans' | 'serif' | 'mono';
-  pinned?: boolean;
-  updatedAt?: string;
-  [key: string]: unknown;
-}
-
-export type CanvasNode = Node<NoteNodeData | EdgeJunctionNodeData | GroupNodeData | DocumentNodeData>;
+export type CanvasNode = Node<NoteNodeData | EdgeJunctionNodeData | GroupNodeData>;
 
 interface CustomEdgeData {
   animated?: boolean;

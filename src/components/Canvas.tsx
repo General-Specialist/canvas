@@ -13,10 +13,9 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Sun, Moon, Trash, Copy, SquaresFour, Palette, FileText } from '@phosphor-icons/react';
+import { Sun, Moon, Trash, Copy, SquaresFour, Palette } from '@phosphor-icons/react';
 
 import { NoteNode } from './nodes/NoteNode';
-import { DocumentNode } from './nodes/DocumentNode';
 import { EdgeJunctionNode } from './nodes/EdgeJunctionNode';
 import { GroupNode, COLOR_THEMES } from './nodes/GroupNode';
 import { CustomEditableEdge } from './edges/CustomEditableEdge';
@@ -44,7 +43,6 @@ import {
 
 const nodeTypes = {
   noteNode: NoteNode,
-  documentNode: DocumentNode,
   edgeJunction: EdgeJunctionNode,
   groupNode: GroupNode,
 };
@@ -533,33 +531,6 @@ const InnerCanvas: React.FC = () => {
     [setNodes]
   );
 
-  const handleAddDocument = useCallback(
-    (position?: { x: number; y: number }) => {
-      const pos = position || {
-        x: 250 + Math.random() * 40,
-        y: 150 + Math.random() * 40,
-      };
-
-      setNodes((nds) => [
-        ...nds,
-        {
-          id: `doc-${Date.now()}`,
-          type: 'documentNode',
-          position: pos,
-          style: { width: 720, height: 540 },
-          data: {
-            title: '',
-            content: '',
-            fontFamily: 'sans',
-            updatedAt: new Date().toISOString(),
-          },
-          selected: true,
-        },
-      ]);
-    },
-    [setNodes]
-  );
-
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: CanvasNode) => {
     event.preventDefault();
     event.stopPropagation();
@@ -703,14 +674,6 @@ const InnerCanvas: React.FC = () => {
           className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-52 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
           style={{ top: menu.y, left: menu.x }}
         >
-          <MenuItem
-            label="+ Add Document"
-            icon={<FileText className="w-4 h-4 text-[#1CB0F6]" />}
-            onClick={() => {
-              handleAddDocument(menu.flowPosition);
-              setMenu(null);
-            }}
-          />
           <MenuItem
             label="+ Add Note"
             onClick={() => {

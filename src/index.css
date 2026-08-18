@@ -215,6 +215,68 @@ input[type=number] {
   white-space: normal;
 }
 
+/* Typst math and document custom styles */
+.typst-render-output {
+  color: inherit;
+}
+
+.typst-math-inline {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -0.22em;
+  margin: 0 0.15em;
+  line-height: 1;
+}
+
+.typst-math-inline svg,
+.typst-math-inline-svg {
+  display: inline-block;
+  vertical-align: middle;
+  height: 1.28em;
+  width: auto;
+  max-width: 100%;
+}
+
+.typst-math-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0.6em 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.typst-math-display svg,
+.typst-math-display-svg {
+  display: block;
+  max-height: 220px;
+  height: auto;
+  width: auto;
+  max-width: 100%;
+}
+
+.typst-doc-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+/* Ensure glyphs and math strokes inherit theme text color in dark/light mode */
+.typst-render-output svg .outline_glyph,
+.typst-render-output svg .outline_glyph path,
+.typst-render-output svg .typst-text,
+.typst-render-output svg g[fill]:not([fill="none"]):not([fill="transparent"]) {
+  fill: currentColor !important;
+}
+
+.typst-render-output svg .typst-shape,
+.typst-render-output svg path:not(.outline_glyph):not(.pseudo-link),
+.typst-render-output svg line {
+  stroke: currentColor !important;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

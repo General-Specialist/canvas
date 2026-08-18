@@ -82,12 +82,6 @@ export const loadSavedNodes = (): CanvasNode[] => {
         style: { ...node.style, width: 260 },
       };
     }
-    if (node.type === 'documentNode' && (!node.style || !node.style.width)) {
-      return {
-        ...node,
-        style: { ...node.style, width: 720, height: 540 },
-      };
-    }
     return node;
   });
   return sortNodesByDepth(formatted);

@@ -203,12 +203,12 @@ export function getNodeDimensions(node: Node): { width: number; height: number }
     node.measured?.width ||
     node.width ||
     (!isNaN(styleWidth) && styleWidth > 0 ? styleWidth : 0) ||
-    (isJunction ? 16 : node.type === 'noteNode' ? 260 : node.type === 'documentNode' ? 720 : 300);
+    (isJunction ? 16 : node.type === 'noteNode' ? 260 : 300);
   const height =
     node.measured?.height ||
     node.height ||
     (!isNaN(styleHeight) && styleHeight > 0 ? styleHeight : 0) ||
-    (isJunction ? 16 : node.type === 'noteNode' ? 100 : node.type === 'documentNode' ? 540 : 200);
+    (isJunction ? 16 : node.type === 'noteNode' ? 100 : 200);
 
   return { width, height };
 }
