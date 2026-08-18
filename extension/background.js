@@ -24,6 +24,7 @@ let focusState = {
     'netflix.com',
   ],
   unlockedUntil: null,
+  activeSiteStopwatches: {},
   lastUpdated: Date.now(),
 };
 
@@ -41,9 +42,19 @@ if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) 
   }).catch(() => {});
 }
 
+function normalizeDomain(raw) {
+  if (!raw) return '';
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .replace(/^www\./, '')
+    .replace(/^m\./, '');
+}
+
 function updateState(newState) {
   if (!newState) return;
-  const prevRunning = focusState.isRunning && !focusState.isPaused;
   focusState = { ...focusState, ...newState };
 
   if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
@@ -53,11 +64,18 @@ function updateState(newState) {
   // Update extension badge
   updateBadge();
 
-  // If timer just became active and mode is 'unlock_on_timer', reload blocked tabs
-  const nowRunning = focusState.isRunning && !focusState.isPaused;
-  if (!prevRunning && nowRunning && focusState.blockingMode === 'unlock_on_timer') {
-    reloadBlockedTabs();
-  }
+  // Reload tabs that are now unblocked, or lock tabs that are now blocked
+  reloadBlockedTabs();
+  blockRestrictedTabs();
+
+  // Notify any open extension pages (blocked page, popup)
+  try {
+    browser.runtime.sendMessage({
+      type: 'FOCUS_STATE_UPDATED',
+      state: focusState,
+      isConnected,
+    }).catch(() => {});
+  } catch {}
 }
 
 function updateBadge() {
@@ -77,6 +95,14 @@ function updateBadge() {
   }
 
   const isTimerActive = focusState.isRunning && !focusState.isPaused;
+  const hasSiteStopwatch = Object.keys(focusState.activeSiteStopwatches || {}).length > 0;
+
+  if (hasSiteStopwatch) {
+    browser.browserAction.setBadgeText({ text: 'FREE' });
+    browser.browserAction.setBadgeBackgroundColor({ color: '#58CC02' });
+    return;
+  }
+
   if (focusState.blockingMode === 'unlock_on_timer') {
     if (isTimerActive) {
       browser.browserAction.setBadgeText({ text: 'ON' });
@@ -113,6 +139,7 @@ function connectWebSocket() {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
+      pollStatus();
     };
 
     ws.onmessage = (event) => {
@@ -144,7 +171,7 @@ function scheduleReconnect() {
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
     connectWebSocket();
-  }, 2500);
+  }, 2000);
 }
 
 // Fallback Polling in case WebSocket drops
@@ -176,17 +203,21 @@ function matchDomain(hostname, fullUrl) {
     urlLower.includes('music.youtube.com')
   ) {
     const hasExplicitMusicBlock = focusState.blockedDomains.some(
-      (item) => item.toLowerCase().trim() === 'music.youtube.com'
+      (item) => normalizeDomain(item) === 'music.youtube.com'
     );
     if (!hasExplicitMusicBlock) {
       return null; // Allowed!
     }
   }
 
+  const cleanHost = normalizeDomain(host);
+
   for (const item of focusState.blockedDomains) {
-    const pattern = item.toLowerCase().trim();
+    const pattern = normalizeDomain(item);
     if (!pattern) continue;
     if (
+      cleanHost === pattern ||
+      cleanHost.endsWith('.' + pattern) ||
       host === pattern ||
       host === 'www.' + pattern ||
       host === 'm.' + pattern ||
@@ -200,6 +231,7 @@ function matchDomain(hostname, fullUrl) {
 
 // Determine whether a domain should be blocked
 function isDomainBlocked(urlStr) {
+  if (!urlStr) return false;
   if (!focusState.blockingEnabled) return false;
 
   // Check temporary pass
@@ -218,9 +250,18 @@ function isDomainBlocked(urlStr) {
 
     // Check if this website has an active running stopwatch in Jarvis!
     const stopwatches = focusState.activeSiteStopwatches || {};
-    const isStopwatchRunning = Boolean(
-      stopwatches[matched] || stopwatches[url.hostname.toLowerCase()]
-    );
+    const cleanMatched = normalizeDomain(matched);
+    const cleanHost = normalizeDomain(url.hostname);
+
+    const isStopwatchRunning = Object.keys(stopwatches).some((site) => {
+      const cleanSite = normalizeDomain(site);
+      return (
+        cleanSite === cleanMatched ||
+        cleanSite === cleanHost ||
+        cleanHost === cleanSite ||
+        cleanHost.endsWith('.' + cleanSite)
+      );
+    });
 
     if (isStopwatchRunning) {
       return false; // Stopwatch is active -> Unlocked!
@@ -238,8 +279,6 @@ function isDomainBlocked(urlStr) {
     return false;
   }
 }
-
-
 
 // Intercept Web Requests
 browser.webRequest.onBeforeRequest.addListener(
@@ -268,18 +307,20 @@ browser.webRequest.onBeforeRequest.addListener(
   ['blocking']
 );
 
-// If blocked tabs are open when timer starts, refresh them to load original page
+// If blocked tabs are open when an unblock occurs, refresh them to load original target
 async function reloadBlockedTabs() {
   try {
     const blockerUrl = browser.runtime.getURL('blocked.html');
     const tabs = await browser.tabs.query({});
     for (const tab of tabs) {
       if (tab.url && tab.url.startsWith(blockerUrl)) {
-        const parsed = new URL(tab.url);
-        const target = parsed.searchParams.get('target');
-        if (target && !isDomainBlocked(target)) {
-          browser.tabs.update(tab.id, { url: target });
-        }
+        try {
+          const parsed = new URL(tab.url);
+          const target = parsed.searchParams.get('target');
+          if (target && !isDomainBlocked(target)) {
+            browser.tabs.update(tab.id, { url: target });
+          }
+        } catch {}
       }
     }
   } catch (err) {
@@ -287,11 +328,38 @@ async function reloadBlockedTabs() {
   }
 }
 
+// If an active tab navigated to a blocked site, redirect to blocker page
+async function blockRestrictedTabs() {
+  try {
+    const blockerUrl = browser.runtime.getURL('blocked.html');
+    const tabs = await browser.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.url && !tab.url.startsWith(blockerUrl)) {
+        if (isDomainBlocked(tab.url)) {
+          let hostname = '';
+          try {
+            hostname = new URL(tab.url).hostname;
+          } catch {}
+          const redirectUrl = `${blockerUrl}?target=${encodeURIComponent(tab.url)}&domain=${encodeURIComponent(hostname)}&mode=${encodeURIComponent(focusState.blockingMode)}&tag=${encodeURIComponent(focusState.selectedTagName || 'Focus')}&color=${encodeURIComponent(focusState.selectedTagColor || '#58CC02')}`;
+          browser.tabs.update(tab.id, { url: redirectUrl });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Jarvis Blocker] Error reblocking tabs:', err);
+  }
+}
 
 // Runtime message listener for popup & blocked page
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_FOCUS_STATE') {
     sendResponse({ state: focusState, isConnected });
+    return true;
+  }
+
+  if (message.type === 'CHECK_URL_BLOCKED' || message.type === 'IS_BLOCKED') {
+    const url = message.url || '';
+    sendResponse({ blocked: isDomainBlocked(url) });
     return true;
   }
 
@@ -304,9 +372,32 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'START_SITE_STOPWATCH') {
+    const domain = normalizeDomain(message.domain);
+    if (domain) {
+      focusState.activeSiteStopwatches = focusState.activeSiteStopwatches || {};
+      focusState.activeSiteStopwatches[domain] = Date.now();
+      updateState(focusState);
+      sendResponse({ success: true, activeSiteStopwatches: focusState.activeSiteStopwatches });
+    }
+    return true;
+  }
+
+  if (message.type === 'STOP_SITE_STOPWATCH') {
+    const domain = normalizeDomain(message.domain);
+    if (domain && focusState.activeSiteStopwatches) {
+      delete focusState.activeSiteStopwatches[domain];
+      updateState(focusState);
+      sendResponse({ success: true, activeSiteStopwatches: focusState.activeSiteStopwatches });
+    }
+    return true;
+  }
+
   if (message.type === 'TOGGLE_ENABLED') {
     focusState.blockingEnabled = !focusState.blockingEnabled;
     updateBadge();
+    reloadBlockedTabs();
+    blockRestrictedTabs();
     sendResponse({ success: true, enabled: focusState.blockingEnabled });
     return true;
   }
@@ -314,5 +405,5 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Initialize
 connectWebSocket();
-pollTimer = setInterval(pollStatus, 3000);
+pollTimer = setInterval(pollStatus, 2000);
 updateBadge();

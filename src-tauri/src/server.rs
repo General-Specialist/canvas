@@ -112,6 +112,11 @@ pub fn start_local_server(focus_state: Arc<RwLock<FocusState>>, tx: broadcast::S
                 .route("/status", get(get_status_handler))
                 .route("/health", get(health_check_handler))
                 .route("/ws", get(ws_handler))
+                .route("/api/start-stopwatch", axum::routing::post(start_stopwatch_handler))
+                .route("/api/stop-stopwatch", axum::routing::post(stop_stopwatch_handler))
+                .route("/api/temp-unlock", axum::routing::post(temp_unlock_handler))
+                .route("/api/toggle-blocker", axum::routing::post(toggle_blocker_handler))
+                .route("/api/sync-state", axum::routing::post(sync_state_handler))
                 .layer(cors)
                 .with_state(app_state);
 
@@ -141,6 +146,140 @@ async fn health_check_handler() -> &'static str {
 async fn get_status_handler(State(state): State<AppState>) -> impl IntoResponse {
     let current = state.focus.read().unwrap().clone();
     (StatusCode::OK, Json(current))
+}
+
+#[derive(Deserialize)]
+pub struct DomainPayload {
+    pub domain: String,
+}
+
+#[derive(Deserialize)]
+pub struct TempUnlockPayload {
+    pub minutes: Option<u32>,
+}
+
+async fn start_stopwatch_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<DomainPayload>,
+) -> impl IntoResponse {
+    let cleaned = payload
+        .domain
+        .trim()
+        .to_lowercase()
+        .trim_start_matches("http://")
+        .trim_start_matches("https://")
+        .trim_start_matches("www.")
+        .trim_start_matches("m.")
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .to_string();
+
+    if cleaned.is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(state.focus.read().unwrap().clone()));
+    }
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let updated = {
+        let mut guard = state.focus.write().unwrap();
+        guard.active_site_stopwatches.insert(cleaned, now);
+        guard.last_updated = now;
+        guard.clone()
+    };
+
+    let _ = state.tx.send(updated.clone());
+    (StatusCode::OK, Json(updated))
+}
+
+async fn stop_stopwatch_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<DomainPayload>,
+) -> impl IntoResponse {
+    let cleaned = payload
+        .domain
+        .trim()
+        .to_lowercase()
+        .trim_start_matches("http://")
+        .trim_start_matches("https://")
+        .trim_start_matches("www.")
+        .trim_start_matches("m.")
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .to_string();
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let updated = {
+        let mut guard = state.focus.write().unwrap();
+        guard.active_site_stopwatches.remove(&cleaned);
+        guard.active_site_stopwatches.remove(&payload.domain);
+        guard.last_updated = now;
+        guard.clone()
+    };
+
+    let _ = state.tx.send(updated.clone());
+    (StatusCode::OK, Json(updated))
+}
+
+async fn temp_unlock_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<TempUnlockPayload>,
+) -> impl IntoResponse {
+    let mins = payload.minutes.unwrap_or(5);
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    let unlock_until = now + (mins as u64) * 60 * 1000;
+
+    let updated = {
+        let mut guard = state.focus.write().unwrap();
+        guard.unlocked_until = Some(unlock_until);
+        guard.last_updated = now;
+        guard.clone()
+    };
+
+    let _ = state.tx.send(updated.clone());
+    (StatusCode::OK, Json(updated))
+}
+
+async fn toggle_blocker_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let updated = {
+        let mut guard = state.focus.write().unwrap();
+        guard.blocking_enabled = !guard.blocking_enabled;
+        guard.last_updated = now;
+        guard.clone()
+    };
+
+    let _ = state.tx.send(updated.clone());
+    (StatusCode::OK, Json(updated))
+}
+
+async fn sync_state_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<FocusState>,
+) -> impl IntoResponse {
+    let updated = {
+        let mut guard = state.focus.write().unwrap();
+        *guard = payload.clone();
+        guard.clone()
+    };
+
+    let _ = state.tx.send(updated.clone());
+    (StatusCode::OK, Json(updated))
 }
 
 async fn ws_handler(

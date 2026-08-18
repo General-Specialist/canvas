@@ -262,7 +262,14 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const startSiteStopwatch = useCallback((domain: string) => {
-    const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+    const cleaned = domain
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '')
+      .replace(/^www\./, '')
+      .replace(/^m\./, '');
+    if (!cleaned) return;
     playFocusSound('start');
     setBlockerConfig((prev) => ({
       ...prev,
@@ -274,17 +281,63 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const stopSiteStopwatch = useCallback((domain: string) => {
-    const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
-    playFocusSound('complete');
+    const cleaned = domain
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '')
+      .replace(/^www\./, '')
+      .replace(/^m\./, '');
+    if (!cleaned) return;
+
     setBlockerConfig((prev) => {
+      const startedAt = prev.activeSiteStopwatches?.[cleaned] || prev.activeSiteStopwatches?.[domain];
+      const endedAt = Date.now();
+      const startTimestamp = startedAt || (endedAt - 1000);
+      const duration = Math.max(1, Math.round((endedAt - startTimestamp) / 1000));
+
+      // Resolve or create tag for this unblocked website
+      let targetTag = tags.find(
+        (t) => t.name.toLowerCase() === cleaned || t.name.toLowerCase() === domain.toLowerCase()
+      );
+
+      if (!targetTag) {
+        const colorIndex = tags.length;
+        const newTag: FocusTag = {
+          id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          name: cleaned,
+          color: TAG_COLORS[colorIndex % TAG_COLORS.length],
+          createdAt: Date.now(),
+        };
+        setTags((prevTags) => [...prevTags, newTag]);
+        targetTag = newTag;
+      }
+
+      // Create focus session block for this unblock duration
+      const newSession: FocusSession = {
+        id: `session-${endedAt}-${Math.random().toString(36).substr(2, 4)}`,
+        tagId: targetTag.id,
+        tagName: targetTag.name,
+        tagColor: targetTag.color,
+        taskTitle: `Unblocked: ${cleaned}`,
+        durationSeconds: duration,
+        mode: 'stopwatch',
+        startedAt: startTimestamp,
+        endedAt,
+      };
+
+      setSessions((prevSessions) => [newSession, ...prevSessions]);
+      playFocusSound('complete');
+
       const copy = { ...(prev.activeSiteStopwatches || {}) };
       delete copy[cleaned];
+      delete copy[domain];
       return {
         ...prev,
         activeSiteStopwatches: copy,
       };
     });
-  }, []);
+  }, [tags]);
 
 
 

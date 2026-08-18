@@ -60,6 +60,7 @@ export const FocusCalendarView: React.FC = () => {
     resetTimer,
     finishSession,
     blockerConfig,
+    stopSiteStopwatch,
   } = useFocus();
 
   const {
@@ -90,13 +91,16 @@ export const FocusCalendarView: React.FC = () => {
     } catch {}
   };
 
-  // Zoom / Hour Height state (defaults to 85px for a spacious, zoomed-in view)
+  // Zoom / Hour Height state (defaults to 85px = 100% zoom, supports up to 850px = 1000% zoom)
+  const MIN_HOUR_HEIGHT = 40; // ~47%
+  const MAX_HOUR_HEIGHT = 850; // 1000%
+
   const [hourHeight, setHourHeight] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('jarvis_focus_hour_height_v1');
       if (saved) {
         const val = Number(saved);
-        if (val >= 50 && val <= 160) return val;
+        if (val >= MIN_HOUR_HEIGHT && val <= MAX_HOUR_HEIGHT) return val;
       }
     } catch {
       // fallback
@@ -106,24 +110,22 @@ export const FocusCalendarView: React.FC = () => {
 
   const handleZoomIn = () => {
     setHourHeight((prev) => {
-      const next = Math.min(150, prev + 15);
+      const step = prev >= 340 ? 50 : prev >= 170 ? 25 : 15;
+      const next = Math.min(MAX_HOUR_HEIGHT, prev + step);
       try {
         localStorage.setItem('jarvis_focus_hour_height_v1', String(next));
-      } catch {
-        // ignore
-      }
+      } catch {}
       return next;
     });
   };
 
   const handleZoomOut = () => {
     setHourHeight((prev) => {
-      const next = Math.max(50, prev - 15);
+      const step = prev > 340 ? 50 : prev > 170 ? 25 : 15;
+      const next = Math.max(MIN_HOUR_HEIGHT, prev - step);
       try {
         localStorage.setItem('jarvis_focus_hour_height_v1', String(next));
-      } catch {
-        // ignore
-      }
+      } catch {}
       return next;
     });
   };
@@ -209,12 +211,14 @@ export const FocusCalendarView: React.FC = () => {
     }
   }, [viewMode, hourHeight]);
 
-  // Current time ticker for the red indicator line
+  // Current time ticker for the red indicator line and live stopwatch blocks
   const [nowDate, setNowDate] = useState<Date>(new Date());
   useEffect(() => {
-    const timer = setInterval(() => setNowDate(new Date()), 30000);
+    const hasActiveSiteStopwatch = Object.keys(blockerConfig.activeSiteStopwatches || {}).length > 0;
+    const intervalMs = (isRunning || hasActiveSiteStopwatch) ? 1000 : 30000;
+    const timer = setInterval(() => setNowDate(new Date()), intervalMs);
     return () => clearInterval(timer);
-  }, []);
+  }, [isRunning, blockerConfig.activeSiteStopwatches]);
 
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
   const monthDays = useMemo(() => getMonthDays(currentDate), [currentDate]);
@@ -488,7 +492,7 @@ export const FocusCalendarView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleZoomOut}
-                  disabled={hourHeight <= 50}
+                  disabled={hourHeight <= MIN_HOUR_HEIGHT}
                   className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   title="Zoom out calendar"
                 >
@@ -500,9 +504,9 @@ export const FocusCalendarView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleZoomIn}
-                  disabled={hourHeight >= 150}
+                  disabled={hourHeight >= MAX_HOUR_HEIGHT}
                   className="p-1.5 rounded-md text-[var(--text-light)] hover:text-[var(--text-normal)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  title="Zoom in calendar"
+                  title="Zoom in calendar (supports over 500%)"
                 >
                   <Plus size={12} weight="bold" />
                 </button>
@@ -847,6 +851,13 @@ export const FocusCalendarView: React.FC = () => {
                           {hourHeight >= 65 && (
                             <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-[var(--border-color)]/30 pointer-events-none" />
                           )}
+                          {/* 15-minute and 45-minute subtle dotted sub-lines when zoomed in deep (200%+) */}
+                          {hourHeight >= 180 && (
+                            <>
+                              <div className="absolute top-1/4 left-0 right-0 border-b border-dotted border-[var(--border-color)]/20 pointer-events-none" />
+                              <div className="absolute top-3/4 left-0 right-0 border-b border-dotted border-[var(--border-color)]/20 pointer-events-none" />
+                            </>
+                          )}
                         </div>
                       ))}
 
@@ -887,6 +898,72 @@ export const FocusCalendarView: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Live Active Unblock / Site Stopwatches Blocks */}
+                      {isCurrent &&
+                        Object.entries(blockerConfig.activeSiteStopwatches || {}).map(
+                          ([siteDomain, startedAt]) => {
+                            const siteElapsed = Math.max(
+                              1,
+                              Math.floor((nowDate.getTime() - startedAt) / 1000)
+                            );
+                            const siteStart = new Date(startedAt);
+                            const siteStartHour =
+                              siteStart.getHours() +
+                              siteStart.getMinutes() / 60 +
+                              siteStart.getSeconds() / 3600;
+                            const siteTop = Math.max(
+                              0,
+                              (siteStartHour - START_HOUR) * hourHeight
+                            );
+                            const siteHeight = Math.max(
+                              26,
+                              (siteElapsed / 3600) * hourHeight
+                            );
+                            const siteTag = tags.find(
+                              (t) =>
+                                t.name.toLowerCase() === siteDomain.toLowerCase()
+                            );
+                            const siteColor = siteTag?.color || '#58CC02';
+
+                            return (
+                              <div
+                                key={siteDomain}
+                                style={{
+                                  top: `${siteTop}px`,
+                                  height: `${siteHeight}px`,
+                                  borderLeftColor: siteColor,
+                                }}
+                                className="absolute left-1 right-1 z-20 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] p-1.5 flex flex-col justify-between overflow-hidden bg-[var(--node-bg)] shadow-xs hover:border-[var(--text-light)] transition-all"
+                              >
+                                <div className="flex items-center justify-between gap-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="w-2 h-2 rounded-full shrink-0 bg-[#58CC02] animate-pulse" />
+                                    <span className="text-xs font-bold text-[var(--text-hover)] truncate">
+                                      {siteDomain}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="text-[10px] font-mono font-bold text-[#58CC02]">
+                                      {formatDuration(siteElapsed)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        stopSiteStopwatch(siteDomain);
+                                      }}
+                                      className="px-1.5 py-0.5 rounded bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold cursor-pointer transition-all active:scale-95"
+                                      title="Stop stopwatch & save block to calendar"
+                                    >
+                                      Stop
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
 
                       {/* Synced Google Calendar Events Blocks */}
                       {dayGCal.map((e) => {

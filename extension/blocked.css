@@ -22,6 +22,9 @@ body {
 }
 
 .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   animation: fadeIn 0.2s ease-out;
 }
@@ -40,4 +43,35 @@ body {
   font-weight: 600;
   letter-spacing: -0.5px;
   color: #d1d5db;
+  margin-bottom: 24px;
+}
+
+.unblock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
+  background-color: #58cc02;
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #46a302;
+  transition: all 0.15s ease;
+}
+
+.unblock-btn:hover {
+  filter: brightness(1.08);
+}
+
+.unblock-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #46a302;
+}
+
+.unblock-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

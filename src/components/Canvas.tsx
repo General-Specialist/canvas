@@ -740,8 +740,8 @@ const InnerCanvas: React.FC = () => {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        minZoom={0.1}
-        maxZoom={2.5}
+        minZoom={0.05}
+        maxZoom={10}
         selectionOnDrag={isGroupMode}
         panOnDrag={!isGroupMode}
         selectionKeyCode={isGroupMode ? null : ['Meta', 'Control']}
