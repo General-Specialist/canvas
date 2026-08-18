@@ -62,28 +62,11 @@ export const getDateOffsetIso = (offsetDays: number = 0): string => {
   return `${y}-${m}-${day}`;
 };
 
-export const loadSavedSleepEntries = (): SleepEntry[] => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_SLEEP_ENTRIES);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        // Filter out any previous sample/mock entries
-        return parsed.filter((e) => e && e.id && !e.id.startsWith('sleep-sample-'));
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load sleep entries from storage:', err);
-  }
-  return [];
-};
+import { getStorage, setStorage } from './storage';
 
-export const saveSleepEntries = (entries: SleepEntry[]): void => {
-  try {
-    // Filter out sample entries when saving
-    const clean = entries.filter((e) => e && e.id && !e.id.startsWith('sleep-sample-'));
-    localStorage.setItem(STORAGE_KEY_SLEEP_ENTRIES, JSON.stringify(clean));
-  } catch (err) {
-    console.error('Failed to save sleep entries to storage:', err);
-  }
-};
+export const loadSavedSleepEntries = (): SleepEntry[] =>
+  getStorage<SleepEntry[]>(STORAGE_KEY_SLEEP_ENTRIES, []);
+
+export const saveSleepEntries = (entries: SleepEntry[]): void =>
+  setStorage(STORAGE_KEY_SLEEP_ENTRIES, entries);
+

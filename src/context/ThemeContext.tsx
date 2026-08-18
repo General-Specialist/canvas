@@ -12,15 +12,16 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('canvas_theme');
+    const saved = localStorage.getItem('jarvis_theme') || localStorage.getItem('canvas_theme');
     if (saved === 'light' || saved === 'dark') return saved;
     return 'dark';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('canvas_theme', theme);
+    localStorage.setItem('jarvis_theme', theme);
   }, [theme]);
+
 
   const toggleTheme = () => {
     setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));

@@ -4,10 +4,11 @@ import {
   FocusBlockingMode,
   FocusSession,
   FocusTag,
-  FocusTimerMode,
   TAG_COLORS,
   getDomainTagName,
+  normalizeDomain,
 } from '../types/focus';
+
 
 import {
   loadSavedBlockerConfig,
@@ -54,9 +55,6 @@ interface FocusContextType {
   tags: FocusTag[];
   selectedTagId: string;
   sessions: FocusSession[];
-  mode: FocusTimerMode;
-  selectedMinutes: number;
-  timeLeft: number;
   elapsedSeconds: number;
   timerStartTime: number | null;
   isRunning: boolean;
@@ -73,16 +71,12 @@ interface FocusContextType {
   startSiteStopwatch: (domain: string) => void;
   stopSiteStopwatch: (domain: string) => void;
 
-
   // Timer Actions
   startTimer: () => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
   resetTimer: () => void;
   finishSession: () => void;
-  setMode: (mode: FocusTimerMode) => void;
-  setSelectedMinutes: (mins: number) => void;
-  setCustomDuration: (seconds: number) => void;
   setSelectedTagId: (id: string) => void;
   createTag: (name: string, color?: string) => void;
   createMultipleTags: (names: string[], baseColor?: string) => void;
@@ -106,10 +100,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedTagId, setSelectedTagId] = useState<string>(() => loadSavedTags()[0]?.id || 'tag-coding');
   const [sessions, setSessions] = useState<FocusSession[]>(loadSavedSessions);
   const [blockerConfig, setBlockerConfig] = useState<FocusBlockerConfig>(loadSavedBlockerConfig);
-
-  const [mode] = useState<FocusTimerMode>('stopwatch');
-  const [selectedMinutes] = useState<number>(25);
-  const [timeLeft] = useState<number>(25 * 60);
 
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -157,7 +147,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       selectedTagName: selectedTag?.name || 'Focus',
       selectedTagColor: selectedTag?.color || '#58CC02',
       elapsedSeconds,
-      mode,
+      mode: 'stopwatch',
       blockingEnabled: blockerConfig.enabled,
       blockingMode: blockerConfig.mode,
       blockedDomains: blockerConfig.blockedDomains,
@@ -170,13 +160,9 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isPaused,
     selectedTag,
     elapsedSeconds,
-    mode,
     blockerConfig,
   ]);
 
-  const setMode = useCallback(() => {}, []);
-  const setSelectedMinutes = useCallback(() => {}, []);
-  const setCustomDuration = useCallback(() => {}, []);
 
   // Main stopwatch tick directly using real wall-clock timestamps (immune to background tab drift)
   useEffect(() => {
@@ -264,12 +250,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const addBlockedDomain = useCallback((domain: string) => {
-    const cleaned = domain
-      .trim()
-      .toLowerCase()
-      .replace(/^https?:\/\//, '')
-      .replace(/\/.*$/, '')
-      .replace(/^www\./, '');
+    const cleaned = normalizeDomain(domain);
     if (!cleaned) return;
 
     setBlockerConfig((prev) => {
@@ -302,13 +283,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const startSiteStopwatch = useCallback((domain: string) => {
-    const cleaned = domain
-      .trim()
-      .toLowerCase()
-      .replace(/^https?:\/\//, '')
-      .replace(/\/.*$/, '')
-      .replace(/^www\./, '')
-      .replace(/^m\./, '');
+    const cleaned = normalizeDomain(domain);
     if (!cleaned) return;
     playFocusSound('start');
     setBlockerConfig((prev) => ({
@@ -325,12 +300,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const rawDomain = domain.trim();
       if (!rawDomain) return;
 
-      const cleanedHost = rawDomain
-        .toLowerCase()
-        .replace(/^https?:\/\//, '')
-        .replace(/\/.*$/, '')
-        .replace(/^www\./, '')
-        .replace(/^m\./, '');
+      const cleanedHost = normalizeDomain(rawDomain);
       if (!cleanedHost) return;
 
       const targetTagName = getDomainTagName(cleanedHost);
@@ -415,8 +385,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
     [tags, blockerConfig.activeSiteStopwatches]
   );
-
-
 
   const createTag = useCallback((name: string, color?: string) => {
     if (!name.trim()) return;
@@ -546,9 +514,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         tags,
         selectedTagId,
         sessions,
-        mode,
-        selectedMinutes,
-        timeLeft,
         elapsedSeconds,
         timerStartTime,
         isRunning,
@@ -568,9 +533,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         resumeTimer,
         resetTimer,
         finishSession,
-        setMode,
-        setSelectedMinutes,
-        setCustomDuration,
         setSelectedTagId,
         createTag,
         createMultipleTags,
@@ -583,6 +545,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateSession,
       }}
     >
+
       {children}
     </FocusContext.Provider>
   );

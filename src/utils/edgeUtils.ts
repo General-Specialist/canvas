@@ -56,6 +56,21 @@ export function autoWrapTitleInText(text: string, titleToWrap: string): string {
   });
 }
 
+function applyAliasesToText(text: string, aliases: string[]): { newText: string; changed: boolean } {
+  let current = text;
+  let changed = false;
+  for (const alias of aliases) {
+    if (alias.trim().length >= 2) {
+      const next = autoWrapTitleInText(current, alias);
+      if (next !== current) {
+        changed = true;
+        current = next;
+      }
+    }
+  }
+  return { newText: current, changed };
+}
+
 export function autoLinkNodesForTitle<T extends Node>(
   nodes: T[],
   targetNodeId: string,
@@ -75,38 +90,22 @@ export function autoLinkNodesForTitle<T extends Node>(
     const content = (node.data as any)?.content;
     if (typeof content !== 'string' || !content.trim()) return node;
 
-    let currentContent = content;
-    let hasChanged = false;
-
-    aliases.forEach((alias) => {
-      if (alias.trim().length >= 2) {
-        const newContent = autoWrapTitleInText(currentContent, alias);
-        if (newContent !== currentContent) {
-          hasChanged = true;
-          currentContent = newContent;
-        }
-      }
-    });
-
-    if (hasChanged) {
+    const { newText, changed } = applyAliasesToText(content, aliases);
+    if (changed) {
       modified = true;
       return {
         ...node,
         data: {
           ...node.data,
-          content: currentContent,
+          content: newText,
           updatedAt: new Date().toISOString(),
         },
       };
     }
-
     return node;
   });
 
-  return {
-    updatedNodes: modified ? newNodes : nodes,
-    modified,
-  };
+  return { updatedNodes: modified ? newNodes : nodes, modified };
 }
 
 export function autoWrapConnectedNodeTitles(
@@ -129,21 +128,17 @@ export function autoWrapConnectedNodeTitles(
 
   const getNodesForId = (id: string): Node[] => {
     const list: Node[] = [];
-    const directNode = nodeMap.get(id);
-    if (directNode) list.push(directNode);
-
-    if (groupChildrenMap.has(id)) {
-      groupChildrenMap.get(id)!.forEach((cid) => {
-        const cNode = nodeMap.get(cid);
-        if (cNode) list.push(cNode);
-      });
-    }
+    const direct = nodeMap.get(id);
+    if (direct) list.push(direct);
+    groupChildrenMap.get(id)?.forEach((cid) => {
+      const c = nodeMap.get(cid);
+      if (c) list.push(c);
+    });
     return list;
   };
 
   let modified = false;
-  const newNodesMap = new Map<string, Node>();
-  nodes.forEach((n) => newNodesMap.set(n.id, { ...n, data: { ...n.data } }));
+  const newNodesMap = new Map<string, Node>(nodes.map((n) => [n.id, { ...n, data: { ...n.data } }]));
 
   edges.forEach((edge) => {
     if (edge.data?.isWikiLink) return;
@@ -159,26 +154,16 @@ export function autoWrapConnectedNodeTitles(
         sources.forEach((src) => {
           if (src.id === tgt.id) return;
           const currentSrc = newNodesMap.get(src.id)!;
-          let content = (currentSrc.data as any)?.content || '';
-          let hasChanged = false;
+          const content = (currentSrc.data as any)?.content || '';
+          const { newText, changed } = applyAliasesToText(content, aliases);
 
-          aliases.forEach((alias) => {
-            if (alias.trim().length >= 2) {
-              const newContent = autoWrapTitleInText(content, alias);
-              if (newContent !== content) {
-                hasChanged = true;
-                content = newContent;
-              }
-            }
-          });
-
-          if (hasChanged) {
+          if (changed) {
             modified = true;
             newNodesMap.set(src.id, {
               ...currentSrc,
               data: {
                 ...currentSrc.data,
-                content,
+                content: newText,
                 updatedAt: new Date().toISOString(),
               },
             });
@@ -193,6 +178,7 @@ export function autoWrapConnectedNodeTitles(
     modified,
   };
 }
+
 
 export function getNodeDimensions(node: Node): { width: number; height: number } {
   const isJunction = node.type === 'edgeJunction';

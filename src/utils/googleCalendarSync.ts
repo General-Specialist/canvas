@@ -1,71 +1,30 @@
 import { GoogleCalendarEvent, GoogleCalendarFeed } from '../types/googleCalendar';
 import { parseIcsContent } from './icalParser';
 
+import { getStorage, setStorage } from './storage';
+
 const STORAGE_KEY_FEEDS = 'jarvis_google_calendars_v1';
 const STORAGE_KEY_EVENTS = 'jarvis_google_calendar_events_v1';
 const STORAGE_KEY_SHOW_GCAL = 'jarvis_show_gcal_events_v1';
 
-export const loadSavedFeeds = (): GoogleCalendarFeed[] => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_FEEDS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load Google calendar feeds:', err);
-  }
-  return [];
-};
+export const loadSavedFeeds = (): GoogleCalendarFeed[] =>
+  getStorage<GoogleCalendarFeed[]>(STORAGE_KEY_FEEDS, []);
 
-export const saveFeeds = (feeds: GoogleCalendarFeed[]): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY_FEEDS, JSON.stringify(feeds));
-  } catch (err) {
-    console.error('Failed to save Google calendar feeds:', err);
-  }
-};
+export const saveFeeds = (feeds: GoogleCalendarFeed[]): void =>
+  setStorage(STORAGE_KEY_FEEDS, feeds);
 
-export const loadSavedGCalEvents = (): GoogleCalendarEvent[] => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_EVENTS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load Google calendar events:', err);
-  }
-  return [];
-};
+export const loadSavedGCalEvents = (): GoogleCalendarEvent[] =>
+  getStorage<GoogleCalendarEvent[]>(STORAGE_KEY_EVENTS, []);
 
-export const saveGCalEvents = (events: GoogleCalendarEvent[]): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(events));
-  } catch (err) {
-    console.error('Failed to save Google calendar events:', err);
-  }
-};
+export const saveGCalEvents = (events: GoogleCalendarEvent[]): void =>
+  setStorage(STORAGE_KEY_EVENTS, events);
 
-export const loadShowGCalPreference = (): boolean => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_SHOW_GCAL);
-    if (raw !== null) {
-      return raw === 'true';
-    }
-  } catch {}
-  return true;
-};
+export const loadShowGCalPreference = (): boolean =>
+  getStorage<boolean>(STORAGE_KEY_SHOW_GCAL, true);
 
-export const saveShowGCalPreference = (show: boolean): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY_SHOW_GCAL, String(show));
-  } catch {}
-};
+export const saveShowGCalPreference = (show: boolean): void =>
+  setStorage(STORAGE_KEY_SHOW_GCAL, show);
+
 
 /**
  * Clean up Google Calendar / iCal URL format

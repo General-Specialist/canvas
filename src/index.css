@@ -22,15 +22,8 @@
   --duo-swan: #E5E5E5;          /* Border lines & subtle fills */
   --duo-polar: #F7F7F7;         /* Off-white background fill */
   --duo-snow: #FFFFFF;          /* Pure White / Primary backgrounds */
-
-  /* Duo's Mascot Palette */
-  --duo-wing-overlay: #43C000;
-  --duo-beak-upper: #FFC200;
-  --duo-beak-lower: #F49000;
-  --duo-beak-inner: #B66E28;
-  --duo-beak-highlight: #FFDE00;
-  --duo-tongue-pink: #FFCAFF;
 }
+
 
 :root,
 [data-theme="dark"] {
@@ -216,6 +209,7 @@ input[type=number] {
 }
 
 /* Typst math and document custom styles */
+
 .typst-render-output {
   color: inherit;
 }

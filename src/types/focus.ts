@@ -5,8 +5,6 @@ export interface FocusTag {
   createdAt: number;
 }
 
-export type FocusTimerMode = 'countdown' | 'stopwatch';
-
 export interface FocusSession {
   id: string;
   tagId: string;
@@ -14,7 +12,7 @@ export interface FocusSession {
   tagColor: string;
   taskTitle?: string;
   durationSeconds: number;
-  mode: FocusTimerMode;
+  mode?: string;
   startedAt: number;
   endedAt: number;
 }
@@ -28,8 +26,6 @@ export interface FocusBlockerConfig {
   unlockedUntil?: number | null;
   activeSiteStopwatches?: Record<string, number>; // domain -> startedAt timestamp
 }
-
-
 
 export const DEFAULT_BLOCKED_DOMAINS: string[] = [
   'youtube.com',
@@ -73,18 +69,27 @@ export const TAG_COLORS = [
 ];
 
 /**
- * Normalizes a raw domain or URL into a clean, human-friendly tag name without domain extensions (.com, .org, etc.)
- * e.g. "youtube.com" -> "YouTube", "reddit.com" -> "Reddit", "twitch.tv" -> "Twitch", "instagram.com" -> "Instagram"
+ * Normalizes a raw URL or domain string into a clean hostname (e.g. "https://www.youtube.com/watch" -> "youtube.com")
  */
-export function getDomainTagName(raw: string): string {
-  if (!raw) return 'Focus';
-  let cleaned = raw
+export function normalizeDomain(raw: string): string {
+  if (!raw) return '';
+  return raw
     .trim()
     .toLowerCase()
     .replace(/^https?:\/\//, '')
     .replace(/\/.*$/, '')
     .replace(/^www\./, '')
     .replace(/^m\./, '');
+}
+
+/**
+ * Normalizes a raw domain or URL into a clean, human-friendly tag name without domain extensions (.com, .org, etc.)
+ * e.g. "youtube.com" -> "YouTube", "reddit.com" -> "Reddit", "twitch.tv" -> "Twitch", "instagram.com" -> "Instagram"
+ */
+export function getDomainTagName(raw: string): string {
+  let cleaned = normalizeDomain(raw);
+  if (!cleaned) return 'Focus';
+
 
   // Strip multi-part TLDs (e.g. .co.uk, .com.au, .co.jp)
   cleaned = cleaned.replace(/\.(co|com|org|net|gov|edu|ac)\.[a-z]{2,4}$/i, '');

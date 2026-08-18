@@ -13,13 +13,13 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Sun, Moon, Trash, Copy, SquaresFour, Palette } from '@phosphor-icons/react';
+import { Trash, Copy, SquaresFour, Palette } from '@phosphor-icons/react';
 
 import { NoteNode } from './nodes/NoteNode';
 import { EdgeJunctionNode } from './nodes/EdgeJunctionNode';
 import { GroupNode, COLOR_THEMES } from './nodes/GroupNode';
 import { CustomEditableEdge } from './edges/CustomEditableEdge';
-import { useTheme } from '../context/ThemeContext';
+
 
 import { CanvasNode, CanvasEdge } from '../types/canvas';
 import {
@@ -88,8 +88,8 @@ const InnerCanvas: React.FC = () => {
   const [menu, setMenu] = useState<{ x: number; y: number; flowPosition: { x: number; y: number } } | null>(null);
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
 
-  const { theme, toggleTheme } = useTheme();
   const { screenToFlowPosition, setViewport, getNodes } = useReactFlow();
+
 
   useEffect(() => {
     setViewport(loadSavedViewport());
@@ -654,22 +654,8 @@ const InnerCanvas: React.FC = () => {
         </div>
       )}
 
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        <button
-          onClick={toggleTheme}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[var(--sidebar-bg)] hover:bg-[var(--sidebar-hover-bg)] text-[var(--text-hover)] border border-[var(--border-color)] text-xs font-medium shadow-md transition-all cursor-pointer"
-          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Theme`}
-        >
-          {theme === 'dark' ? (
-            <Sun className="w-4 h-4 text-[var(--text-hover)]" />
-          ) : (
-            <Moon className="w-4 h-4 text-[var(--text-hover)]" />
-          )}
-          <span className="capitalize">{theme === 'dark' ? 'Light' : 'Dark'}</span>
-        </button>
-      </div>
-
       {menu && (
+
         <div
           className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-52 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
           style={{ top: menu.y, left: menu.x }}

@@ -139,6 +139,38 @@ pub fn start_local_server(focus_state: Arc<RwLock<FocusState>>, tx: broadcast::S
 }
 
 
+fn clean_domain(raw: &str) -> String {
+    raw.trim()
+        .to_lowercase()
+        .trim_start_matches("http://")
+        .trim_start_matches("https://")
+        .trim_start_matches("www.")
+        .trim_start_matches("m.")
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .to_string()
+}
+
+impl AppState {
+    pub fn mutate_and_broadcast<F: FnOnce(&mut FocusState)>(&self, f: F) -> FocusState {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+
+        let updated = {
+            let mut guard = self.focus.write().unwrap();
+            f(&mut *guard);
+            guard.last_updated = now;
+            guard.clone()
+        };
+
+        let _ = self.tx.send(updated.clone());
+        updated
+    }
+}
+
 async fn health_check_handler() -> &'static str {
     "OK"
 }
@@ -162,19 +194,7 @@ async fn start_stopwatch_handler(
     State(state): State<AppState>,
     Json(payload): Json<DomainPayload>,
 ) -> impl IntoResponse {
-    let cleaned = payload
-        .domain
-        .trim()
-        .to_lowercase()
-        .trim_start_matches("http://")
-        .trim_start_matches("https://")
-        .trim_start_matches("www.")
-        .trim_start_matches("m.")
-        .split('/')
-        .next()
-        .unwrap_or("")
-        .to_string();
-
+    let cleaned = clean_domain(&payload.domain);
     if cleaned.is_empty() {
         return (StatusCode::BAD_REQUEST, Json(state.focus.read().unwrap().clone()));
     }
@@ -184,14 +204,10 @@ async fn start_stopwatch_handler(
         .unwrap_or_default()
         .as_millis() as u64;
 
-    let updated = {
-        let mut guard = state.focus.write().unwrap();
-        guard.active_site_stopwatches.insert(cleaned, now);
-        guard.last_updated = now;
-        guard.clone()
-    };
+    let updated = state.mutate_and_broadcast(|s| {
+        s.active_site_stopwatches.insert(cleaned, now);
+    });
 
-    let _ = state.tx.send(updated.clone());
     (StatusCode::OK, Json(updated))
 }
 
@@ -199,33 +215,11 @@ async fn stop_stopwatch_handler(
     State(state): State<AppState>,
     Json(payload): Json<DomainPayload>,
 ) -> impl IntoResponse {
-    let cleaned = payload
-        .domain
-        .trim()
-        .to_lowercase()
-        .trim_start_matches("http://")
-        .trim_start_matches("https://")
-        .trim_start_matches("www.")
-        .trim_start_matches("m.")
-        .split('/')
-        .next()
-        .unwrap_or("")
-        .to_string();
-
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64;
-
-    let updated = {
-        let mut guard = state.focus.write().unwrap();
-        guard.active_site_stopwatches.remove(&cleaned);
-        guard.active_site_stopwatches.remove(&payload.domain);
-        guard.last_updated = now;
-        guard.clone()
-    };
-
-    let _ = state.tx.send(updated.clone());
+    let cleaned = clean_domain(&payload.domain);
+    let updated = state.mutate_and_broadcast(|s| {
+        s.active_site_stopwatches.remove(&cleaned);
+        s.active_site_stopwatches.remove(&payload.domain);
+    });
     (StatusCode::OK, Json(updated))
 }
 
@@ -240,31 +234,16 @@ async fn temp_unlock_handler(
         .as_millis() as u64;
     let unlock_until = now + (mins as u64) * 60 * 1000;
 
-    let updated = {
-        let mut guard = state.focus.write().unwrap();
-        guard.unlocked_until = Some(unlock_until);
-        guard.last_updated = now;
-        guard.clone()
-    };
-
-    let _ = state.tx.send(updated.clone());
+    let updated = state.mutate_and_broadcast(|s| {
+        s.unlocked_until = Some(unlock_until);
+    });
     (StatusCode::OK, Json(updated))
 }
 
 async fn toggle_blocker_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64;
-
-    let updated = {
-        let mut guard = state.focus.write().unwrap();
-        guard.blocking_enabled = !guard.blocking_enabled;
-        guard.last_updated = now;
-        guard.clone()
-    };
-
-    let _ = state.tx.send(updated.clone());
+    let updated = state.mutate_and_broadcast(|s| {
+        s.blocking_enabled = !s.blocking_enabled;
+    });
     (StatusCode::OK, Json(updated))
 }
 
@@ -272,15 +251,12 @@ async fn sync_state_handler(
     State(state): State<AppState>,
     Json(payload): Json<FocusState>,
 ) -> impl IntoResponse {
-    let updated = {
-        let mut guard = state.focus.write().unwrap();
-        *guard = payload.clone();
-        guard.clone()
-    };
-
-    let _ = state.tx.send(updated.clone());
+    let updated = state.mutate_and_broadcast(|s| {
+        *s = payload;
+    });
     (StatusCode::OK, Json(updated))
 }
+
 
 async fn ws_handler(
     ws: WebSocketUpgrade,

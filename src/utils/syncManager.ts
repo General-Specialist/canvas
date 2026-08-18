@@ -29,9 +29,7 @@ import {
   saveShowGCalPreference,
 } from './googleCalendarSync';
 import { loadSavedSleepEntries, saveSleepEntries } from './sleepStorage';
-import type { FocusSession, FocusTag } from '../types/focus';
-import type { GoogleCalendarFeed } from '../types/googleCalendar';
-import type { SleepEntry } from '../types/sleep';
+
 
 
 const STORAGE_KEY_GIST_AUTO_ID = 'jarvis_auto_gist_id';
@@ -81,7 +79,7 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
   let activeApp = 'canvas';
 
   try {
-    const savedTheme = localStorage.getItem('theme');
+    const savedTheme = localStorage.getItem('jarvis_theme') || localStorage.getItem('canvas_theme') || localStorage.getItem('theme');
     if (savedTheme === 'light' || savedTheme === 'dark') theme = savedTheme;
 
     const savedView = localStorage.getItem('jarvis_focus_view_mode_v1');
@@ -92,9 +90,7 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
 
     const savedApp = localStorage.getItem('jarvis_active_app');
     if (savedApp) activeApp = savedApp;
-  } catch {
-    // ignore
-  }
+  } catch {}
 
   const totalFocusSeconds = focusSessions.reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
 
@@ -138,11 +134,12 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
 export const validateBackupPayload = (payload: unknown): payload is JarvisDataBackupV1 => {
   if (!payload || typeof payload !== 'object') return false;
   const p = payload as Record<string, unknown>;
-  return p.app === 'jarvis' && p.version === 1 && typeof p.data === 'object' && p.data !== null;
+  return (p.app === 'jarvis' || p.appName === 'Jarvis') && typeof p.data === 'object' && p.data !== null;
 };
 
+
 /**
- * Restores or merges an imported backup into local application state.
+ * Validates and restores a master backup payload into localStorage.
  */
 export const deserializeAppData = (
   backup: JarvisDataBackupV1,
@@ -167,7 +164,11 @@ export const deserializeAppData = (
       if (incoming.gcalEvents) saveGCalEvents(incoming.gcalEvents);
       if (typeof incoming.gcalShowPreference === 'boolean') saveShowGCalPreference(incoming.gcalShowPreference);
 
-      if (incoming.theme) localStorage.setItem('theme', incoming.theme);
+      if (incoming.theme) {
+        localStorage.setItem('jarvis_theme', incoming.theme);
+        localStorage.setItem('canvas_theme', incoming.theme);
+      }
+
       if (incoming.viewMode) localStorage.setItem('jarvis_focus_view_mode_v1', incoming.viewMode);
       if (incoming.hourHeight) localStorage.setItem('jarvis_focus_hour_height_v1', String(incoming.hourHeight));
       if (incoming.activeApp) localStorage.setItem('jarvis_active_app', incoming.activeApp);
@@ -178,55 +179,36 @@ export const deserializeAppData = (
       };
     } else {
       // MERGE MODE
-      // 1. Merge Nodes
-      const currentNodes = loadSavedNodes();
-      const currentIds = new Set(currentNodes.map((n) => n.id));
-      const newNodes = (incoming.canvasNodes || []).filter((n) => !currentIds.has(n.id));
-      saveNodes([...currentNodes, ...newNodes]);
+      const mergeList = <T>(current: T[], incoming: T[] = [], getKey: (item: T) => string): [T[], number] => {
+        const seen = new Set(current.map(getKey));
+        const additions = incoming.filter((item) => !seen.has(getKey(item)));
+        return [[...current, ...additions], additions.length];
+      };
 
-      // 2. Merge Edges
-      const currentEdges = loadSavedEdges();
-      const currentEdgeIds = new Set(currentEdges.map((e) => e.id));
-      const newEdges = (incoming.canvasEdges || []).filter((e) => !currentEdgeIds.has(e.id));
-      saveEdges([...currentEdges, ...newEdges]);
+      const [mergedNodes, newNodesCount] = mergeList(loadSavedNodes(), incoming.canvasNodes, (n) => n.id);
+      saveNodes(mergedNodes);
 
-      // 3. Merge Tags
-      const currentTags = loadSavedTags();
-      const currentTagNames = new Set(currentTags.map((t) => t.name.toLowerCase()));
-      const currentTagIds = new Set(currentTags.map((t) => t.id));
-      const newTags: FocusTag[] = (incoming.focusTags || []).filter(
-        (t) => !currentTagIds.has(t.id) && !currentTagNames.has(t.name.toLowerCase())
-      );
-      saveTags([...currentTags, ...newTags]);
+      const [mergedEdges] = mergeList(loadSavedEdges(), incoming.canvasEdges, (e) => e.id);
+      saveEdges(mergedEdges);
 
-      // 4. Merge Sessions
-      const currentSessions = loadSavedSessions();
-      const currentSessionIds = new Set(currentSessions.map((s) => s.id));
-      const newSessions: FocusSession[] = (incoming.focusSessions || []).filter((s) => !currentSessionIds.has(s.id));
-      const mergedSessions = [...currentSessions, ...newSessions].sort((a, b) => b.endedAt - a.endedAt);
-      saveSessions(mergedSessions);
+      const [mergedTags, newTagsCount] = mergeList(loadSavedTags(), incoming.focusTags, (t) => t.id);
+      saveTags(mergedTags);
 
-      // 5. Merge Sleep Entries
-      const currentSleep = loadSavedSleepEntries();
-      const currentSleepIds = new Set(currentSleep.map((s) => s.id));
-      const currentSleepDates = new Set(currentSleep.map((s) => s.date));
-      const newSleep: SleepEntry[] = (incoming.sleepEntries || []).filter(
-        (s) => !currentSleepIds.has(s.id) && !currentSleepDates.has(s.date)
-      );
-      const mergedSleep = [...currentSleep, ...newSleep].sort((a, b) => b.date.localeCompare(a.date));
-      saveSleepEntries(mergedSleep);
+      const [mergedSessions, newSessionsCount] = mergeList(loadSavedSessions(), incoming.focusSessions, (s) => s.id);
+      saveSessions(mergedSessions.sort((a, b) => b.endedAt - a.endedAt));
 
-      // 6. Merge Calendar Feeds
-      const currentFeeds = loadSavedFeeds();
-      const currentFeedUrls = new Set(currentFeeds.map((f) => f.url));
-      const newFeeds: GoogleCalendarFeed[] = (incoming.gcalFeeds || []).filter((f) => !currentFeedUrls.has(f.url));
-      saveFeeds([...currentFeeds, ...newFeeds]);
+      const [mergedSleep, newSleepCount] = mergeList(loadSavedSleepEntries(), incoming.sleepEntries, (s) => s.date);
+      saveSleepEntries(mergedSleep.sort((a, b) => b.date.localeCompare(a.date)));
+
+      const [mergedFeeds] = mergeList(loadSavedFeeds(), incoming.gcalFeeds, (f) => f.url);
+      saveFeeds(mergedFeeds);
 
       return {
         success: true,
-        message: `Successfully merged backup (+${newNodes.length} notes, +${newSessions.length} sessions, +${newSleep.length} sleep logs, +${newTags.length} tags).`,
+        message: `Successfully merged backup (+${newNodesCount} notes, +${newSessionsCount} sessions, +${newSleepCount} sleep logs, +${newTagsCount} tags).`,
       };
     }
+
   } catch (err) {
     console.error('Failed to deserialize app data:', err);
     return { success: false, message: `Failed to restore data: ${(err as Error).message}` };

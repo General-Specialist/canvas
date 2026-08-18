@@ -50,12 +50,15 @@ const initialDefaultNodes: CanvasNode[] = [
 
 const initialDefaultViewport: Viewport = { x: 50, y: 50, zoom: 0.9 };
 
-function getStorage<T>(key: string, defaultValue: T): T {
+export function getStorage<T>(key: string, defaultValue: T): T {
   try {
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(defaultValue) ? Array.isArray(parsed) : parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+      if (typeof defaultValue === typeof parsed) {
         return parsed;
       }
     }
@@ -65,13 +68,14 @@ function getStorage<T>(key: string, defaultValue: T): T {
   return defaultValue;
 }
 
-function setStorage<T>(key: string, value: T): void {
+export function setStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
     console.error(`Failed to save ${key} to localStorage:`, err);
   }
 }
+
 
 export const loadSavedNodes = (): CanvasNode[] => {
   const nodes = getStorage(STORAGE_KEY_NODES, initialDefaultNodes);

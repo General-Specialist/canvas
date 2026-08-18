@@ -7,169 +7,58 @@ import {
   getDomainTagName,
 } from '../types/focus';
 
+import { getStorage, setStorage } from './storage';
+
 const STORAGE_KEY_TAGS = 'jarvis_focus_tags_v1';
 const STORAGE_KEY_SESSIONS = 'jarvis_focus_sessions_v1';
 const STORAGE_KEY_BLOCKER = 'jarvis_focus_blocker_v1';
 
 export const loadSavedBlockerConfig = (): FocusBlockerConfig => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_BLOCKER);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.blockedDomains)) {
-        return {
-          ...DEFAULT_BLOCKER_CONFIG,
-          ...parsed,
-        };
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load focus blocker config:', err);
-  }
-  return DEFAULT_BLOCKER_CONFIG;
+  const parsed = getStorage<FocusBlockerConfig>(STORAGE_KEY_BLOCKER, DEFAULT_BLOCKER_CONFIG);
+  return { ...DEFAULT_BLOCKER_CONFIG, ...parsed };
 };
 
-export const saveBlockerConfig = (config: FocusBlockerConfig): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY_BLOCKER, JSON.stringify(config));
-  } catch (err) {
-    console.error('Failed to save focus blocker config:', err);
-  }
-};
-
+export const saveBlockerConfig = (config: FocusBlockerConfig): void =>
+  setStorage(STORAGE_KEY_BLOCKER, config);
 
 export const loadSavedTags = (): FocusTag[] => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_TAGS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const seen = new Set<string>();
-        const cleanedTags: FocusTag[] = [];
+  const parsed = getStorage<FocusTag[]>(STORAGE_KEY_TAGS, DEFAULT_TAGS);
+  if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_TAGS;
 
-        for (const tag of parsed) {
-          if (!tag || !tag.name) continue;
-          let name = tag.name.trim();
-          // Clean legacy domain extension tags (e.g. youtube.com -> YouTube)
-          if (/\.(com|org|net|io|ai|tv|co|app|dev|me|xyz|gg)$/i.test(name)) {
-            name = getDomainTagName(name);
-          }
-          const key = name.toLowerCase();
-          if (seen.has(key)) continue;
-          seen.add(key);
-          cleanedTags.push({
-            ...tag,
-            name,
-          });
-        }
+  const seen = new Set<string>();
+  const cleanedTags: FocusTag[] = [];
 
-        if (cleanedTags.length > 0) {
-          return cleanedTags;
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load focus tags:', err);
+  for (const tag of parsed) {
+    if (!tag || !tag.name) continue;
+    const name = getDomainTagName(tag.name.trim());
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleanedTags.push({ ...tag, name });
   }
-  return DEFAULT_TAGS;
+
+  return cleanedTags.length > 0 ? cleanedTags : DEFAULT_TAGS;
 };
 
-export const saveTags = (tags: FocusTag[]): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY_TAGS, JSON.stringify(tags));
-  } catch (err) {
-    console.error('Failed to save focus tags:', err);
-  }
-};
-
-const createDefaultSessions = (): FocusSession[] => {
-  const today = new Date();
-  const y = today.getFullYear();
-  const m = today.getMonth();
-  const d = today.getDate();
-
-  const start1 = new Date(y, m, d, 9, 30, 0).getTime();
-  const end1 = new Date(y, m, d, 10, 15, 0).getTime();
-
-  const start2 = new Date(y, m, d, 11, 0, 0).getTime();
-  const end2 = new Date(y, m, d, 12, 30, 0).getTime();
-
-  const start3 = new Date(y, m, d, 14, 0, 0).getTime();
-  const end3 = new Date(y, m, d, 15, 0, 0).getTime();
-
-  return [
-    {
-      id: 'session-sample-3',
-      tagId: 'tag-design',
-      tagName: 'Design',
-      tagColor: '#FF9600',
-      durationSeconds: 3600,
-      mode: 'stopwatch',
-      startedAt: start3,
-      endedAt: end3,
-    },
-    {
-      id: 'session-sample-2',
-      tagId: 'tag-coding',
-      tagName: 'Coding',
-      tagColor: '#58CC02',
-      durationSeconds: 5400,
-      mode: 'stopwatch',
-      startedAt: start2,
-      endedAt: end2,
-    },
-    {
-      id: 'session-sample-1',
-      tagId: 'tag-planning',
-      tagName: 'Planning',
-      tagColor: '#2B70C9',
-      durationSeconds: 2700,
-      mode: 'stopwatch',
-      startedAt: start1,
-      endedAt: end1,
-    },
-  ];
-};
+export const saveTags = (tags: FocusTag[]): void =>
+  setStorage(STORAGE_KEY_TAGS, tags);
 
 export const loadSavedSessions = (): FocusSession[] => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_SESSIONS);
-    if (raw !== null) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.map((s) => {
-          let tagName = s.tagName;
-          if (tagName && /\.(com|org|net|io|ai|tv|co|app|dev|me|xyz|gg)$/i.test(tagName)) {
-            tagName = getDomainTagName(tagName);
-          }
-          let taskTitle = s.taskTitle;
-          if (taskTitle && taskTitle.startsWith('Unblocked: ')) {
-            const rawSite = taskTitle.replace(/^Unblocked:\s*/, '');
-            if (/\.(com|org|net|io|ai|tv|co|app|dev|me|xyz|gg)$/i.test(rawSite)) {
-              taskTitle = `Unblocked: ${getDomainTagName(rawSite)}`;
-            }
-          }
-          return {
-            ...s,
-            tagName: tagName || s.tagName,
-            taskTitle,
-          };
-        });
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load focus sessions:', err);
-  }
-  return createDefaultSessions();
+  const parsed = getStorage<FocusSession[]>(STORAGE_KEY_SESSIONS, []);
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed.map((s) => ({
+    ...s,
+    tagName: s.tagName ? getDomainTagName(s.tagName) : s.tagName,
+    taskTitle: s.taskTitle?.startsWith('Unblocked: ')
+      ? `Unblocked: ${getDomainTagName(s.taskTitle.replace(/^Unblocked:\s*/, ''))}`
+      : s.taskTitle,
+  }));
 };
 
-export const saveSessions = (sessions: FocusSession[]): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
-  } catch (err) {
-    console.error('Failed to save focus sessions:', err);
-  }
-};
+export const saveSessions = (sessions: FocusSession[]): void =>
+  setStorage(STORAGE_KEY_SESSIONS, sessions);
+
 
 // Soft Web Audio chime generator (0 external dependencies)
 export const playFocusSound = (type: 'start' | 'complete' | 'click' = 'complete') => {

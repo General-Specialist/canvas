@@ -1,19 +1,9 @@
 import React from 'react';
 import { useFocus } from '../../context/FocusContext';
-
-const formatHoursMins = (totalSecs: number) => {
-  const hrs = Math.floor(totalSecs / 3600);
-  const mins = Math.floor((totalSecs % 3600) / 60);
-  if (hrs > 0) {
-    return `${hrs}h ${mins}m`;
-  }
-  if (mins > 0) {
-    return `${mins}m`;
-  }
-  return `${totalSecs}s`;
-};
+import { formatDuration } from '../../utils/calendarUtils';
 
 export const TagDistributionCard: React.FC = () => {
+
   const { tags, sessions } = useFocus();
 
   // Aggregate time per tag from sessions
@@ -47,7 +37,7 @@ export const TagDistributionCard: React.FC = () => {
     <div className="w-full">
       <div className="flex items-center justify-start mb-2.5">
         <span className="text-xs font-mono font-bold text-[var(--text-normal)]">
-          Total Tracked: {formatHoursMins(totalTimeSeconds)}
+          Total Tracked: {formatDuration(totalTimeSeconds)}
         </span>
       </div>
 
@@ -61,7 +51,7 @@ export const TagDistributionCard: React.FC = () => {
               backgroundColor: t.color,
             }}
             className="h-full transition-all duration-300"
-            title={`${t.name}: ${formatHoursMins(t.time)} (${t.percentage}%)`}
+            title={`${t.name}: ${formatDuration(t.time)} (${t.percentage}%)`}
           />
         ))}
       </div>
@@ -80,7 +70,7 @@ export const TagDistributionCard: React.FC = () => {
             <span className="font-medium text-[var(--text-normal)]">{t.name}</span>
             <span className="text-[var(--text-light)] font-mono text-[11px]">{t.percentage}%</span>
             <span className="font-mono font-semibold text-[var(--text-hover)]">
-              {formatHoursMins(t.time)}
+              {formatDuration(t.time)}
             </span>
           </div>
         ))}
