@@ -71,3 +71,62 @@ export const TAG_COLORS = [
   '#FF9FF3', // Pink
   '#777777', // Gray
 ];
+
+/**
+ * Normalizes a raw domain or URL into a clean, human-friendly tag name without domain extensions (.com, .org, etc.)
+ * e.g. "youtube.com" -> "YouTube", "reddit.com" -> "Reddit", "twitch.tv" -> "Twitch", "instagram.com" -> "Instagram"
+ */
+export function getDomainTagName(raw: string): string {
+  if (!raw) return 'Focus';
+  let cleaned = raw
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .replace(/^www\./, '')
+    .replace(/^m\./, '');
+
+  // Strip multi-part TLDs (e.g. .co.uk, .com.au, .co.jp)
+  cleaned = cleaned.replace(/\.(co|com|org|net|gov|edu|ac)\.[a-z]{2,4}$/i, '');
+
+  // Strip single-part TLDs (.com, .org, .net, .io, .ai, .tv, .co, .app, .dev, .me, etc.)
+  cleaned = cleaned.replace(/\.(com|org|net|edu|gov|mil|io|ai|tv|co|app|dev|me|info|biz|xyz|site|online|tech|store|cc|to|is|gg|so|fm|page|link)$/i, '');
+  cleaned = cleaned.replace(/\.[a-z]{2,6}$/i, '');
+
+  if (!cleaned) return raw.trim();
+
+  // Known brand casing
+  const BRAND_CASING: Record<string, string> = {
+    youtube: 'YouTube',
+    twitter: 'Twitter',
+    x: 'X',
+    reddit: 'Reddit',
+    instagram: 'Instagram',
+    facebook: 'Facebook',
+    tiktok: 'TikTok',
+    twitch: 'Twitch',
+    netflix: 'Netflix',
+    github: 'GitHub',
+    linkedin: 'LinkedIn',
+    google: 'Google',
+    discord: 'Discord',
+    threads: 'Threads',
+    spotify: 'Spotify',
+    pinterest: 'Pinterest',
+    amazon: 'Amazon',
+    whatsapp: 'WhatsApp',
+    hulu: 'Hulu',
+  };
+
+  if (BRAND_CASING[cleaned.toLowerCase()]) {
+    return BRAND_CASING[cleaned.toLowerCase()];
+  }
+
+  // Capitalize words separated by hyphens, underscores, or dots
+  return cleaned
+    .split(/[-_.]/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+

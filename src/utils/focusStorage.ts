@@ -1,4 +1,11 @@
-import { DEFAULT_BLOCKER_CONFIG, DEFAULT_TAGS, FocusBlockerConfig, FocusSession, FocusTag } from '../types/focus';
+import {
+  DEFAULT_BLOCKER_CONFIG,
+  DEFAULT_TAGS,
+  FocusBlockerConfig,
+  FocusSession,
+  FocusTag,
+  getDomainTagName,
+} from '../types/focus';
 
 const STORAGE_KEY_TAGS = 'jarvis_focus_tags_v1';
 const STORAGE_KEY_SESSIONS = 'jarvis_focus_sessions_v1';
@@ -37,7 +44,28 @@ export const loadSavedTags = (): FocusTag[] => {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        const seen = new Set<string>();
+        const cleanedTags: FocusTag[] = [];
+
+        for (const tag of parsed) {
+          if (!tag || !tag.name) continue;
+          let name = tag.name.trim();
+          // Clean legacy domain extension tags (e.g. youtube.com -> YouTube)
+          if (/\.(com|org|net|io|ai|tv|co|app|dev|me|xyz|gg)$/i.test(name)) {
+            name = getDomainTagName(name);
+          }
+          const key = name.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          cleanedTags.push({
+            ...tag,
+            name,
+          });
+        }
+
+        if (cleanedTags.length > 0) {
+          return cleanedTags;
+        }
       }
     }
   } catch (err) {
@@ -109,7 +137,24 @@ export const loadSavedSessions = (): FocusSession[] => {
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed;
+        return parsed.map((s) => {
+          let tagName = s.tagName;
+          if (tagName && /\.(com|org|net|io|ai|tv|co|app|dev|me|xyz|gg)$/i.test(tagName)) {
+            tagName = getDomainTagName(tagName);
+          }
+          let taskTitle = s.taskTitle;
+          if (taskTitle && taskTitle.startsWith('Unblocked: ')) {
+            const rawSite = taskTitle.replace(/^Unblocked:\s*/, '');
+            if (/\.(com|org|net|io|ai|tv|co|app|dev|me|xyz|gg)$/i.test(rawSite)) {
+              taskTitle = `Unblocked: ${getDomainTagName(rawSite)}`;
+            }
+          }
+          return {
+            ...s,
+            tagName: tagName || s.tagName,
+            taskTitle,
+          };
+        });
       }
     }
   } catch (err) {

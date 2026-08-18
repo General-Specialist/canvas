@@ -13,7 +13,7 @@ import {
   Tag as TagIcon,
 } from '@phosphor-icons/react';
 import { useFocus } from '../../context/FocusContext';
-import { FocusSession } from '../../types/focus';
+import { FocusSession, getDomainTagName } from '../../types/focus';
 import {
   getWeekDays,
   getMonthDays,
@@ -920,9 +920,12 @@ export const FocusCalendarView: React.FC = () => {
                               26,
                               (siteElapsed / 3600) * hourHeight
                             );
+                            const siteDisplayName = getDomainTagName(siteDomain);
                             const siteTag = tags.find(
                               (t) =>
-                                t.name.toLowerCase() === siteDomain.toLowerCase()
+                                t.name.toLowerCase() === siteDisplayName.toLowerCase() ||
+                                t.name.toLowerCase() === siteDomain.toLowerCase() ||
+                                getDomainTagName(t.name).toLowerCase() === siteDisplayName.toLowerCase()
                             );
                             const siteColor = siteTag?.color || '#58CC02';
 
@@ -940,7 +943,7 @@ export const FocusCalendarView: React.FC = () => {
                                   <div className="flex items-center gap-1.5 min-w-0">
                                     <span className="w-2 h-2 rounded-full shrink-0 bg-[#58CC02] animate-pulse" />
                                     <span className="text-xs font-bold text-[var(--text-hover)] truncate">
-                                      {siteDomain}
+                                      {siteDisplayName}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">

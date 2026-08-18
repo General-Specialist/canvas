@@ -6,6 +6,7 @@ import {
   FocusTag,
   FocusTimerMode,
   TAG_COLORS,
+  getDomainTagName,
 } from '../types/focus';
 
 import {
@@ -295,64 +296,96 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
   }, []);
 
-  const stopSiteStopwatch = useCallback((domain: string) => {
-    const cleaned = domain
-      .trim()
-      .toLowerCase()
-      .replace(/^https?:\/\//, '')
-      .replace(/\/.*$/, '')
-      .replace(/^www\./, '')
-      .replace(/^m\./, '');
-    if (!cleaned) return;
+  const stopSiteStopwatch = useCallback(
+    (domain: string) => {
+      const rawDomain = domain.trim();
+      if (!rawDomain) return;
 
-    setBlockerConfig((prev) => {
-      const startedAt = prev.activeSiteStopwatches?.[cleaned] || prev.activeSiteStopwatches?.[domain];
+      const cleanedHost = rawDomain
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/\/.*$/, '')
+        .replace(/^www\./, '')
+        .replace(/^m\./, '');
+      if (!cleanedHost) return;
+
+      const targetTagName = getDomainTagName(cleanedHost);
+      const targetTagLower = targetTagName.toLowerCase();
+
+      // Retrieve start timestamp
+      const startedAt =
+        blockerConfig.activeSiteStopwatches?.[cleanedHost] ||
+        blockerConfig.activeSiteStopwatches?.[rawDomain] ||
+        blockerConfig.activeSiteStopwatches?.[domain];
       const endedAt = Date.now();
-      const startTimestamp = startedAt || (endedAt - 1000);
+      const startTimestamp = startedAt || endedAt - 1000;
       const duration = Math.max(1, Math.round((endedAt - startTimestamp) / 1000));
 
-      // Resolve or create tag for this unblocked website
-      let targetTag = tags.find(
-        (t) => t.name.toLowerCase() === cleaned || t.name.toLowerCase() === domain.toLowerCase()
-      );
+      // 1. Resolve existing tag or create a new clean tag (without .com)
+      let targetTag = tags.find((t) => {
+        const tLower = t.name.toLowerCase().trim();
+        return (
+          tLower === targetTagLower ||
+          tLower === cleanedHost ||
+          tLower === rawDomain.toLowerCase() ||
+          getDomainTagName(t.name).toLowerCase() === targetTagLower
+        );
+      });
 
       if (!targetTag) {
         const colorIndex = tags.length;
         const newTag: FocusTag = {
-          id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          name: cleaned,
+          id: `tag-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          name: targetTagName,
           color: TAG_COLORS[colorIndex % TAG_COLORS.length],
           createdAt: Date.now(),
         };
-        setTags((prevTags) => [...prevTags, newTag]);
         targetTag = newTag;
+
+        setTags((prev) => {
+          const alreadyExists = prev.some((t) => {
+            const tLower = t.name.toLowerCase().trim();
+            return (
+              tLower === targetTagLower ||
+              tLower === cleanedHost ||
+              getDomainTagName(t.name).toLowerCase() === targetTagLower
+            );
+          });
+          if (alreadyExists) return prev;
+          return [...prev, newTag];
+        });
       }
 
-      // Create focus session block for this unblock duration
+      // 2. Create focus session block for this unblock duration
       const newSession: FocusSession = {
-        id: `session-${endedAt}-${Math.random().toString(36).substr(2, 4)}`,
+        id: `session-${endedAt}-${Math.random().toString(36).substring(2, 6)}`,
         tagId: targetTag.id,
         tagName: targetTag.name,
         tagColor: targetTag.color,
-        taskTitle: `Unblocked: ${cleaned}`,
+        taskTitle: `Unblocked: ${targetTagName}`,
         durationSeconds: duration,
         mode: 'stopwatch',
         startedAt: startTimestamp,
         endedAt,
       };
 
-      setSessions((prevSessions) => [newSession, ...prevSessions]);
+      setSessions((prev) => [newSession, ...prev]);
       playFocusSound('complete');
 
-      const copy = { ...(prev.activeSiteStopwatches || {}) };
-      delete copy[cleaned];
-      delete copy[domain];
-      return {
-        ...prev,
-        activeSiteStopwatches: copy,
-      };
-    });
-  }, [tags]);
+      // 3. Remove stopwatch from activeSiteStopwatches
+      setBlockerConfig((prev) => {
+        const copy = { ...(prev.activeSiteStopwatches || {}) };
+        delete copy[cleanedHost];
+        delete copy[rawDomain];
+        delete copy[domain];
+        return {
+          ...prev,
+          activeSiteStopwatches: copy,
+        };
+      });
+    },
+    [tags, blockerConfig.activeSiteStopwatches]
+  );
 
 
 
