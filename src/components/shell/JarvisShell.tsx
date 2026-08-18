@@ -4,10 +4,12 @@ import {
   Timer,
   Sun,
   Moon,
+  Bed,
 } from '@phosphor-icons/react';
 import { AppId, JARVIS_APPS } from '../../types/navigation';
 import { Canvas } from '../Canvas';
 import { FocusApp } from '../focus/FocusApp';
+import { SleepApp } from '../sleep/SleepApp';
 import { useTheme } from '../../context/ThemeContext';
 import { useFocus } from '../../context/FocusContext';
 import { loadGistSyncConfig, pushToGitHubGist, saveGistSyncConfig } from '../../utils/syncManager';
@@ -16,7 +18,7 @@ export const JarvisShell: React.FC = () => {
   const [activeApp, setActiveApp] = useState<AppId>(() => {
     try {
       const saved = localStorage.getItem('jarvis_active_app');
-      if (saved === 'focus' || saved === 'canvas') return saved;
+      if (saved === 'focus' || saved === 'canvas' || saved === 'sleep') return saved;
     } catch {
       // fallback
     }
@@ -60,7 +62,7 @@ export const JarvisShell: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Global Keyboard Shortcuts (Cmd+1 for Canvas, Cmd+2 for Focus)
+  // Global Keyboard Shortcuts (Cmd+1 for Canvas, Cmd+2 for Focus, Cmd+3 for Sleep)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '1') {
@@ -69,6 +71,9 @@ export const JarvisShell: React.FC = () => {
       } else if ((e.metaKey || e.ctrlKey) && e.key === '2') {
         e.preventDefault();
         handleSelectApp('focus');
+      } else if ((e.metaKey || e.ctrlKey) && e.key === '3') {
+        e.preventDefault();
+        handleSelectApp('sleep');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -98,8 +103,10 @@ export const JarvisShell: React.FC = () => {
               >
                 {app.id === 'canvas' ? (
                   <SquaresFour size={20} weight={isActive ? 'fill' : 'bold'} />
-                ) : (
+                ) : app.id === 'focus' ? (
                   <Timer size={20} weight={isActive ? 'fill' : 'bold'} />
+                ) : (
+                  <Bed size={20} weight={isActive ? 'fill' : 'bold'} />
                 )}
 
                 {/* Running focus active badge (solid, non-flashing) */}
@@ -149,7 +156,17 @@ export const JarvisShell: React.FC = () => {
         >
           <FocusApp />
         </div>
+
+        {/* Sleep Viewport */}
+        <div
+          className={`w-full h-full ${
+            activeApp === 'sleep' ? 'block' : 'hidden pointer-events-none'
+          }`}
+        >
+          <SleepApp />
+        </div>
       </main>
     </div>
   );
 };
+

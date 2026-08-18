@@ -1,4 +1,4 @@
-export type AppId = 'canvas' | 'focus';
+export type AppId = 'canvas' | 'focus' | 'sleep';
 
 export interface JarvisAppConfig {
   id: AppId;
@@ -23,4 +23,12 @@ export const JARVIS_APPS: JarvisAppConfig[] = [
     iconName: 'Timer',
     shortcut: '⌘2',
   },
+  {
+    id: 'sleep',
+    name: 'Sleep',
+    description: 'Sleep & recovery tracker',
+    iconName: 'Moon',
+    shortcut: '⌘3',
+  },
 ];
+

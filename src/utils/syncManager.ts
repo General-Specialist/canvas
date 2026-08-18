@@ -28,8 +28,11 @@ import {
   saveGCalEvents,
   saveShowGCalPreference,
 } from './googleCalendarSync';
+import { loadSavedSleepEntries, saveSleepEntries } from './sleepStorage';
 import type { FocusSession, FocusTag } from '../types/focus';
 import type { GoogleCalendarFeed } from '../types/googleCalendar';
+import type { SleepEntry } from '../types/sleep';
+
 
 const STORAGE_KEY_GIST_AUTO_ID = 'jarvis_auto_gist_id';
 
@@ -66,6 +69,8 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
   const focusSessions = loadSavedSessions();
   const focusBlockerConfig = loadSavedBlockerConfig();
 
+  const sleepEntries = loadSavedSleepEntries();
+
   const gcalFeeds = loadSavedFeeds();
   const gcalEvents = loadSavedGCalEvents();
   const gcalShowPreference = loadShowGCalPreference();
@@ -98,6 +103,7 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
     edgeCount: canvasEdges.length,
     tagCount: focusTags.length,
     sessionCount: focusSessions.length,
+    sleepCount: sleepEntries.length,
     gcalFeedCount: gcalFeeds.length,
     totalFocusSeconds,
   };
@@ -114,6 +120,7 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
       focusTags,
       focusSessions,
       focusBlockerConfig,
+      sleepEntries,
       gcalFeeds,
       gcalEvents,
       gcalShowPreference,
@@ -155,6 +162,7 @@ export const deserializeAppData = (
       if (incoming.focusTags) saveTags(incoming.focusTags);
       if (incoming.focusSessions) saveSessions(incoming.focusSessions);
       if (incoming.focusBlockerConfig) saveBlockerConfig(incoming.focusBlockerConfig);
+      if (incoming.sleepEntries) saveSleepEntries(incoming.sleepEntries);
       if (incoming.gcalFeeds) saveFeeds(incoming.gcalFeeds);
       if (incoming.gcalEvents) saveGCalEvents(incoming.gcalEvents);
       if (typeof incoming.gcalShowPreference === 'boolean') saveShowGCalPreference(incoming.gcalShowPreference);
@@ -198,7 +206,17 @@ export const deserializeAppData = (
       const mergedSessions = [...currentSessions, ...newSessions].sort((a, b) => b.endedAt - a.endedAt);
       saveSessions(mergedSessions);
 
-      // 5. Merge Calendar Feeds
+      // 5. Merge Sleep Entries
+      const currentSleep = loadSavedSleepEntries();
+      const currentSleepIds = new Set(currentSleep.map((s) => s.id));
+      const currentSleepDates = new Set(currentSleep.map((s) => s.date));
+      const newSleep: SleepEntry[] = (incoming.sleepEntries || []).filter(
+        (s) => !currentSleepIds.has(s.id) && !currentSleepDates.has(s.date)
+      );
+      const mergedSleep = [...currentSleep, ...newSleep].sort((a, b) => b.date.localeCompare(a.date));
+      saveSleepEntries(mergedSleep);
+
+      // 6. Merge Calendar Feeds
       const currentFeeds = loadSavedFeeds();
       const currentFeedUrls = new Set(currentFeeds.map((f) => f.url));
       const newFeeds: GoogleCalendarFeed[] = (incoming.gcalFeeds || []).filter((f) => !currentFeedUrls.has(f.url));
@@ -206,7 +224,7 @@ export const deserializeAppData = (
 
       return {
         success: true,
-        message: `Successfully merged backup (+${newNodes.length} notes, +${newSessions.length} sessions, +${newTags.length} tags).`,
+        message: `Successfully merged backup (+${newNodes.length} notes, +${newSessions.length} sessions, +${newSleep.length} sleep logs, +${newTags.length} tags).`,
       };
     }
   } catch (err) {
@@ -214,6 +232,7 @@ export const deserializeAppData = (
     return { success: false, message: `Failed to restore data: ${(err as Error).message}` };
   }
 };
+
 
 /**
  * Downloads a `.json` backup file.
