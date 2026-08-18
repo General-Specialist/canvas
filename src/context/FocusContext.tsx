@@ -122,6 +122,21 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     saveBlockerConfig(blockerConfig);
   }, [blockerConfig]);
 
+  // Listen for data restore events (from Gist sync or JSON import)
+  useEffect(() => {
+    const handleRestore = () => {
+      const reloadedTags = loadSavedTags();
+      setTags(reloadedTags);
+      if (reloadedTags.length > 0) {
+        setSelectedTagId((prev) => (reloadedTags.some((t) => t.id === prev) ? prev : reloadedTags[0].id));
+      }
+      setSessions(loadSavedSessions());
+      setBlockerConfig(loadSavedBlockerConfig());
+    };
+    window.addEventListener('jarvis-data-restored', handleRestore);
+    return () => window.removeEventListener('jarvis-data-restored', handleRestore);
+  }, []);
+
   const selectedTag = tags.find((t) => t.id === selectedTagId) || tags[0];
 
   // Sync state to Tauri backend whenever key fields update

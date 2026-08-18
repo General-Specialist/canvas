@@ -49,6 +49,17 @@ export const GoogleCalendarProvider: React.FC<{ children: React.ReactNode }> = (
     saveGCalEvents(events);
   }, [events]);
 
+  // Listen for data restore events (from Gist sync or JSON import)
+  useEffect(() => {
+    const handleRestore = () => {
+      setFeeds(loadSavedFeeds());
+      setEvents(loadSavedGCalEvents());
+      setShowGCalEventsState(loadShowGCalPreference());
+    };
+    window.addEventListener('jarvis-data-restored', handleRestore);
+    return () => window.removeEventListener('jarvis-data-restored', handleRestore);
+  }, []);
+
   const setShowGCalEvents = useCallback((show: boolean) => {
     setShowGCalEventsState(show);
     saveShowGCalPreference(show);

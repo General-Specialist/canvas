@@ -10,6 +10,7 @@ import { Canvas } from '../Canvas';
 import { FocusApp } from '../focus/FocusApp';
 import { useTheme } from '../../context/ThemeContext';
 import { useFocus } from '../../context/FocusContext';
+import { loadGistSyncConfig, pushToGitHubGist, saveGistSyncConfig } from '../../utils/syncManager';
 
 export const JarvisShell: React.FC = () => {
   const [activeApp, setActiveApp] = useState<AppId>(() => {
@@ -33,6 +34,31 @@ export const JarvisShell: React.FC = () => {
       // ignore
     }
   };
+
+  // Silent background auto-sync to GitHub Gist every 15 minutes (if configured)
+  useEffect(() => {
+    const autoSync = async () => {
+      const cfg = loadGistSyncConfig();
+      if (cfg.enabled && cfg.autoSync && cfg.token && cfg.gistId) {
+        try {
+          const res = await pushToGitHubGist(cfg.token, cfg.gistId);
+          if (res.success) {
+            saveGistSyncConfig({
+              ...cfg,
+              lastSyncedAt: Date.now(),
+              lastSyncStatus: 'success' as const,
+              lastSyncError: undefined,
+            });
+          }
+        } catch (err) {
+          console.warn('[JarvisSync] Auto-sync error:', err);
+        }
+      }
+    };
+
+    const interval = setInterval(autoSync, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Global Keyboard Shortcuts (Cmd+1 for Canvas, Cmd+2 for Focus)
   useEffect(() => {

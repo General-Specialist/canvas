@@ -101,6 +101,17 @@ const InnerCanvas: React.FC = () => {
     saveEdges(edges);
   }, [edges]);
 
+  // Listen for data restore events (from Gist sync or JSON import)
+  useEffect(() => {
+    const handleRestore = () => {
+      setNodes(loadSavedNodes());
+      setEdges(loadSavedEdges());
+      setViewport(loadSavedViewport());
+    };
+    window.addEventListener('jarvis-data-restored', handleRestore);
+    return () => window.removeEventListener('jarvis-data-restored', handleRestore);
+  }, [setNodes, setEdges, setViewport]);
+
   const executeGroup = useCallback(
     (targetNodeIds: string[]) => {
       if (targetNodeIds.length === 0) return;
