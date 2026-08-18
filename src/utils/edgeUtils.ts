@@ -4,19 +4,109 @@ function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export function extractTitleAliases(title?: string): string[] {
+  if (!title || typeof title !== 'string') return [];
+  const trimmed = title.trim();
+  if (!trimmed) return [];
+
+  const aliases = new Set<string>();
+  aliases.add(trimmed);
+
+  // 1. Extract all contents inside parentheses (...)
+  // e.g. "Example (ex)" -> "ex", "Artificial Intelligence (AI) (ML)" -> "AI", "ML"
+  const parenRegex = /\(([^)]+)\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = parenRegex.exec(trimmed)) !== null) {
+    const inside = match[1]?.trim();
+    if (inside && inside.length > 0) {
+      aliases.add(inside);
+    }
+  }
+
+  // 2. Extract title without parentheses
+  // e.g. "Example (ex)" -> "Example"
+  const withoutParens = trimmed.replace(/\s*\([^)]*\)/g, '').trim();
+  if (withoutParens && withoutParens.length > 0) {
+    aliases.add(withoutParens);
+  }
+
+  return Array.from(aliases);
+}
+
 export function autoWrapTitleInText(text: string, titleToWrap: string): string {
-  if (!text || !titleToWrap || !titleToWrap.trim()) return text;
+  if (!text || !titleToWrap || typeof titleToWrap !== 'string') return text;
   const trimmedTitle = titleToWrap.trim();
   if (trimmedTitle.length < 2) return text;
 
   const escaped = escapeRegExp(trimmedTitle);
-  const regex = new RegExp(`(\\[\\[[^\\]]*\\]\\])|(\\b${escaped}\\b)`, 'gi');
+  const startsWithWord = /^\w/.test(trimmedTitle);
+  const endsWithWord = /\w$/.test(trimmedTitle);
+  const leftBoundary = startsWithWord ? '\\b' : '(?<!\\S)';
+  const rightBoundary = endsWithWord ? '\\b' : '(?!\\S)';
 
-  return text.replace(regex, (match, bracketed, unbracketed) => {
-    if (bracketed) return bracketed;
+  const tokenRegex = new RegExp(
+    `(\\[\\[[^\\]]*\\]\\]|\`[^\`]*\`|\\$\\$[\\s\\S]*?\\$\\$|\\$[^\\$\\n]*?\\$|\\[[^\\]]*\\]\\([^\\)]*\\))|(${leftBoundary}${escaped}${rightBoundary})`,
+    'gi'
+  );
+
+  return text.replace(tokenRegex, (match, preserved, unbracketed) => {
+    if (preserved) return preserved;
     if (unbracketed) return `[[${unbracketed}]]`;
     return match;
   });
+}
+
+export function autoLinkNodesForTitle<T extends Node>(
+  nodes: T[],
+  targetNodeId: string,
+  rawTitle: string
+): { updatedNodes: T[]; modified: boolean } {
+  if (!rawTitle || typeof rawTitle !== 'string' || rawTitle.trim().length < 2) {
+    return { updatedNodes: nodes, modified: false };
+  }
+
+  const aliases = extractTitleAliases(rawTitle).sort((a, b) => b.length - a.length);
+  if (aliases.length === 0) return { updatedNodes: nodes, modified: false };
+
+  let modified = false;
+  const newNodes = nodes.map((node) => {
+    if (node.id === targetNodeId) return node;
+
+    const content = (node.data as any)?.content;
+    if (typeof content !== 'string' || !content.trim()) return node;
+
+    let currentContent = content;
+    let hasChanged = false;
+
+    aliases.forEach((alias) => {
+      if (alias.trim().length >= 2) {
+        const newContent = autoWrapTitleInText(currentContent, alias);
+        if (newContent !== currentContent) {
+          hasChanged = true;
+          currentContent = newContent;
+        }
+      }
+    });
+
+    if (hasChanged) {
+      modified = true;
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          content: currentContent,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    return node;
+  });
+
+  return {
+    updatedNodes: modified ? newNodes : nodes,
+    modified,
+  };
 }
 
 export function autoWrapConnectedNodeTitles(
@@ -56,33 +146,45 @@ export function autoWrapConnectedNodeTitles(
   nodes.forEach((n) => newNodesMap.set(n.id, { ...n, data: { ...n.data } }));
 
   edges.forEach((edge) => {
+    if (edge.data?.isWikiLink) return;
+
     const sources = getNodesForId(edge.source);
     const targets = getNodesForId(edge.target);
 
-    [[sources, targets]].forEach(([fromList, toList]) => {
-      fromList.forEach((src) => {
-        const srcTitle = (src.data as any)?.title;
-        if (typeof srcTitle === 'string' && srcTitle.trim().length >= 2) {
-          toList.forEach((tgt) => {
-            if (tgt.id === src.id) return;
-            const currentTgt = newNodesMap.get(tgt.id)!;
-            const content = (currentTgt.data as any)?.content || '';
-            const newContent = autoWrapTitleInText(content, srcTitle);
+    targets.forEach((tgt) => {
+      const tgtTitle = (tgt.data as any)?.title;
+      if (typeof tgtTitle === 'string' && tgtTitle.trim().length >= 2) {
+        const aliases = extractTitleAliases(tgtTitle).sort((a, b) => b.length - a.length);
 
-            if (newContent !== content) {
-              modified = true;
-              newNodesMap.set(tgt.id, {
-                ...currentTgt,
-                data: {
-                  ...currentTgt.data,
-                  content: newContent,
-                  updatedAt: new Date().toISOString(),
-                },
-              });
+        sources.forEach((src) => {
+          if (src.id === tgt.id) return;
+          const currentSrc = newNodesMap.get(src.id)!;
+          let content = (currentSrc.data as any)?.content || '';
+          let hasChanged = false;
+
+          aliases.forEach((alias) => {
+            if (alias.trim().length >= 2) {
+              const newContent = autoWrapTitleInText(content, alias);
+              if (newContent !== content) {
+                hasChanged = true;
+                content = newContent;
+              }
             }
           });
-        }
-      });
+
+          if (hasChanged) {
+            modified = true;
+            newNodesMap.set(src.id, {
+              ...currentSrc,
+              data: {
+                ...currentSrc.data,
+                content,
+                updatedAt: new Date().toISOString(),
+              },
+            });
+          }
+        });
+      }
     });
   });
 
@@ -101,12 +203,12 @@ export function getNodeDimensions(node: Node): { width: number; height: number }
     node.measured?.width ||
     node.width ||
     (!isNaN(styleWidth) && styleWidth > 0 ? styleWidth : 0) ||
-    (isJunction ? 16 : node.type === 'noteNode' ? 260 : 300);
+    (isJunction ? 16 : node.type === 'noteNode' ? 260 : node.type === 'documentNode' ? 720 : 300);
   const height =
     node.measured?.height ||
     node.height ||
     (!isNaN(styleHeight) && styleHeight > 0 ? styleHeight : 0) ||
-    (isJunction ? 16 : node.type === 'noteNode' ? 100 : 200);
+    (isJunction ? 16 : node.type === 'noteNode' ? 100 : node.type === 'documentNode' ? 540 : 200);
 
   return { width, height };
 }
@@ -216,16 +318,21 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
   // Scan for Wiki-Links
   const titleToNodeIdsMap = new Map<string, string[]>();
   nodes.forEach((n) => {
-    const addKey = (k?: string) => {
-      if (typeof k === 'string' && k.trim()) {
-        const lower = k.trim().toLowerCase();
-        const existing = titleToNodeIdsMap.get(lower) || [];
-        if (!existing.includes(n.id)) existing.push(n.id);
-        titleToNodeIdsMap.set(lower, existing);
-      }
-    };
-    addKey((n.data as any)?.title);
-    addKey(n.id);
+    const rawTitle = (n.data as any)?.title;
+    const aliases = extractTitleAliases(rawTitle);
+    aliases.forEach((alias) => {
+      const lower = alias.trim().toLowerCase();
+      const existing = titleToNodeIdsMap.get(lower) || [];
+      if (!existing.includes(n.id)) existing.push(n.id);
+      titleToNodeIdsMap.set(lower, existing);
+    });
+
+    if (n.id) {
+      const lowerId = n.id.trim().toLowerCase();
+      const existing = titleToNodeIdsMap.get(lowerId) || [];
+      if (!existing.includes(n.id)) existing.push(n.id);
+      titleToNodeIdsMap.set(lowerId, existing);
+    }
   });
 
   const wikiLinkRegex = /\[\[(.*?)\]\]/g;
@@ -254,9 +361,9 @@ export function syncAutoEdges(nodes: Node[], edges: Edge[]): Edge[] {
         matchingTargetIds.forEach((targetId) => {
           if (targetId !== sourceNode.id) {
             addBaseEdge({
-              id: `wiki-${targetId}-${sourceNode.id}`,
-              source: targetId,
-              target: sourceNode.id,
+              id: `wiki-${sourceNode.id}-${targetId}`,
+              source: sourceNode.id,
+              target: targetId,
               type: 'customEdge',
               markerEnd: { type: MarkerType.ArrowClosed },
               data: { isWikiLink: true },
@@ -389,17 +496,41 @@ export function expandGroupEdges(groupIds: Set<string>, nodes: Node[], edges: Ed
   return newEdges;
 }
 
-export function getGroupDepth(nodeId: string, nodeMap: Map<string, Node>): number {
-  const node = nodeMap.get(nodeId);
-  if (!node || !node.parentId || !nodeMap.has(node.parentId)) return 0;
-  return 1 + getGroupDepth(node.parentId, nodeMap);
+export function isDescendantOf<T extends { id: string; parentId?: string }>(
+  nodeId: string,
+  potentialAncestorId: string,
+  nodeMap: Map<string, T>
+): boolean {
+  let current = nodeMap.get(nodeId);
+  const visited = new Set<string>();
+  while (current && current.parentId && !visited.has(current.id)) {
+    visited.add(current.id);
+    if (current.parentId === potentialAncestorId) return true;
+    current = nodeMap.get(current.parentId);
+  }
+  return false;
+}
+
+export function getGroupDepth<T extends { id: string; parentId?: string }>(
+  nodeId: string,
+  nodeMap: Map<string, T>
+): number {
+  let depth = 0;
+  let current = nodeMap.get(nodeId);
+  const visited = new Set<string>();
+  while (current && current.parentId && nodeMap.has(current.parentId) && !visited.has(current.id)) {
+    visited.add(current.id);
+    depth += 1;
+    current = nodeMap.get(current.parentId);
+  }
+  return depth;
 }
 
 export function sortNodesByDepth<T extends Node>(nodes: T[]): T[] {
   const nodeMap = new Map<string, T>(nodes.map((n) => [n.id, n]));
 
   const validNodes = nodes.map((n) => {
-    if (n.parentId && !nodeMap.has(n.parentId)) {
+    if (n.parentId && (!nodeMap.has(n.parentId) || isDescendantOf(n.parentId, n.id, nodeMap as Map<string, Node>))) {
       return { ...n, parentId: undefined };
     }
     return n;
@@ -407,7 +538,22 @@ export function sortNodesByDepth<T extends Node>(nodes: T[]): T[] {
 
   const validMap = new Map<string, T>(validNodes.map((n) => [n.id, n]));
 
-  return [...validNodes].sort((a, b) => {
+  // Calculate distinct hierarchical zIndex:
+  // - Group depth 0: zIndex 1
+  // - Group depth 1: zIndex 2
+  // - Group depth 2: zIndex 3
+  // - Leaf nodes (notes, docs): zIndex 100 + depth
+  const withZIndex = validNodes.map((n) => {
+    const isGroup = n.type === 'groupNode';
+    const depth = getGroupDepth(n.id, validMap as Map<string, Node>);
+    const zIndex = isGroup ? 1 + depth : 100 + depth;
+    return {
+      ...n,
+      zIndex,
+    };
+  });
+
+  return [...withZIndex].sort((a, b) => {
     const isAGroup = a.type === 'groupNode';
     const isBGroup = b.type === 'groupNode';
 
@@ -417,7 +563,7 @@ export function sortNodesByDepth<T extends Node>(nodes: T[]): T[] {
     if (isAGroup && isBGroup) {
       const depthA = getGroupDepth(a.id, validMap as Map<string, Node>);
       const depthB = getGroupDepth(b.id, validMap as Map<string, Node>);
-      return depthA - depthB;
+      if (depthA !== depthB) return depthA - depthB;
     }
 
     return 0;

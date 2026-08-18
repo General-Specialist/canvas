@@ -52,6 +52,7 @@ export const FocusCalendarView: React.FC = () => {
     selectedTag,
     sessions,
     elapsedSeconds,
+    timerStartTime,
     isRunning,
     isPaused,
     startTimer,
@@ -819,7 +820,9 @@ export const FocusCalendarView: React.FC = () => {
 
                   // Check for live active session today
                   const isLiveToday = isRunning && isCurrent;
-                  const activeStart = isLiveToday
+                  const activeStart = isLiveToday && timerStartTime
+                    ? new Date(timerStartTime)
+                    : isLiveToday
                     ? new Date(Date.now() - elapsedSeconds * 1000)
                     : null;
                   const activeStartHour = activeStart

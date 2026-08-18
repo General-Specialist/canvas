@@ -2,7 +2,7 @@ import React, { useState, memo, useCallback } from 'react';
 import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
 import { GroupNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
-import { syncAutoEdges } from '../../utils/edgeUtils';
+import { syncAutoEdges, autoLinkNodesForTitle } from '../../utils/edgeUtils';
 import { WikilinkText } from '../WikilinkText';
 
 export const COLOR_THEMES: Record<string, { name: string; bg: string; border: string; text: string; dot: string }> = {
@@ -97,6 +97,24 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
     [id, setNodes, setEdges]
   );
 
+  const commitTitle = useCallback(
+    (finalTitle: string) => {
+      setIsEditingTitle(false);
+      const trimmed = finalTitle.trim();
+      if (trimmed.length >= 3) {
+        setNodes((nds) => {
+          const { updatedNodes, modified } = autoLinkNodesForTitle(nds, id, trimmed);
+          if (modified) {
+            setEdges((eds) => syncAutoEdges(updatedNodes, eds) as CanvasEdge[]);
+            return updatedNodes as any;
+          }
+          return nds;
+        });
+      }
+    },
+    [id, setNodes, setEdges]
+  );
+
   return (
     <div
       className={`relative w-full h-full rounded-2xl border-2 flex flex-col overflow-hidden transition-colors duration-200 ${
@@ -123,11 +141,11 @@ export const GroupNode: React.FC<NodeProps> = memo(({ id, data, selected, isConn
               rows={1}
               value={titleText}
               onChange={(e) => updateGroupData({ title: e.target.value })}
-              onBlur={() => setIsEditingTitle(false)}
+              onBlur={() => commitTitle(titleText)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  setIsEditingTitle(false);
+                  commitTitle(titleText);
                 } else if (e.key === 'Escape') {
                   setIsEditingTitle(false);
                 }

@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import katex from 'katex';
-import { CanvasNode } from '../types/canvas';
+import { CanvasNode, CanvasEdge } from '../types/canvas';
+import { extractTitleAliases, autoLinkNodesForTitle, syncAutoEdges } from '../utils/edgeUtils';
 
 interface WikilinkTextProps {
   text: string;
@@ -86,7 +87,7 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
   className = '',
   onTextClick,
 }) => {
-  const { getNodes, setNodes, fitView } = useReactFlow();
+  const { getNodes, setNodes, setEdges, fitView } = useReactFlow();
 
   const handleLinkClick = useCallback(
     (targetTitle: string, e: React.MouseEvent) => {
@@ -98,10 +99,11 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
 
       const existingNode = allNodes.find((n) => {
         const title = (n.data as any)?.title;
-        return (
-          (typeof title === 'string' && title.trim().toLowerCase() === lowerTarget) ||
-          n.id.trim().toLowerCase() === lowerTarget
-        );
+        if (typeof title === 'string') {
+          const aliases = extractTitleAliases(title);
+          if (aliases.some((a) => a.toLowerCase() === lowerTarget)) return true;
+        }
+        return n.id.trim().toLowerCase() === lowerTarget;
       });
 
       if (existingNode) {
@@ -122,11 +124,18 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
           selected: true,
         };
 
-        setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), newNode]);
+        setNodes((nds) => {
+          const current = [...nds.map((n) => ({ ...n, selected: false })), newNode];
+          const { updatedNodes, modified } = autoLinkNodesForTitle(current, newId, targetTitle);
+          const finalNodes = modified ? (updatedNodes as CanvasNode[]) : current;
+          setEdges((eds) => syncAutoEdges(finalNodes, eds) as CanvasEdge[]);
+          return finalNodes;
+        });
+
         setTimeout(() => fitView({ nodes: [{ id: newId }], duration: 500, padding: 0.4 }), 50);
       }
     },
-    [getNodes, setNodes, fitView, sourceNodeId]
+    [getNodes, setNodes, setEdges, fitView, sourceNodeId]
   );
 
   return (

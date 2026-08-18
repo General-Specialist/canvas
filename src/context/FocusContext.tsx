@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   FocusBlockerConfig,
   FocusBlockingMode,
@@ -51,6 +51,7 @@ interface FocusContextType {
   selectedMinutes: number;
   timeLeft: number;
   elapsedSeconds: number;
+  timerStartTime: number | null;
   isRunning: boolean;
   isPaused: boolean;
   selectedTag: FocusTag | undefined;
@@ -102,13 +103,13 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mode] = useState<FocusTimerMode>('stopwatch');
   const [selectedMinutes] = useState<number>(25);
   const [timeLeft] = useState<number>(25 * 60);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-
-  const timerRef = useRef<number | null>(null);
-  const sessionStartTimeRef = useRef<number>(Date.now());
+  const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
+  const [pausedDurationMs, setPausedDurationMs] = useState<number>(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
   // Save tags & sessions whenever they change
   useEffect(() => {
@@ -157,8 +158,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       activeSiteStopwatches: blockerConfig.activeSiteStopwatches || {},
       lastUpdated: Date.now(),
     });
-
-
   }, [
     isRunning,
     isPaused,
@@ -172,14 +171,65 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setSelectedMinutes = useCallback(() => {}, []);
   const setCustomDuration = useCallback(() => {}, []);
 
+  // Main stopwatch tick directly using real wall-clock timestamps (immune to background tab drift)
+  useEffect(() => {
+    if (!isRunning || !timerStartTime) {
+      return;
+    }
+
+    const updateElapsed = () => {
+      const now = isPaused && pausedAt ? pausedAt : Date.now();
+      const totalElapsedMs = Math.max(0, now - timerStartTime - pausedDurationMs);
+      setElapsedSeconds(Math.floor(totalElapsedMs / 1000));
+    };
+
+    updateElapsed();
+    const interval = window.setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning, isPaused, timerStartTime, pausedAt, pausedDurationMs]);
+
+  const startTimer = useCallback(() => {
+    playFocusSound('start');
+    const now = Date.now();
+    setTimerStartTime(now);
+    setPausedAt(null);
+    setPausedDurationMs(0);
+    setElapsedSeconds(0);
+    setIsRunning(true);
+    setIsPaused(false);
+  }, []);
+
+  const pauseTimer = useCallback(() => {
+    if (!isRunning || isPaused) return;
+    setPausedAt(Date.now());
+    setIsPaused(true);
+  }, [isRunning, isPaused]);
+
+  const resumeTimer = useCallback(() => {
+    if (!isRunning || !isPaused) return;
+    if (pausedAt) {
+      setPausedDurationMs((prev) => prev + (Date.now() - pausedAt));
+    }
+    setPausedAt(null);
+    setIsPaused(false);
+  }, [isRunning, isPaused, pausedAt]);
+
+  const resetTimer = useCallback(() => {
+    setIsRunning(false);
+    setIsPaused(false);
+    setTimerStartTime(null);
+    setPausedAt(null);
+    setPausedDurationMs(0);
+    setElapsedSeconds(0);
+  }, []);
+
   const finishSession = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
     playFocusSound('complete');
 
+    const endTimestamp = isPaused && pausedAt ? pausedAt : Date.now();
+    const startTimestamp = timerStartTime || endTimestamp - elapsedSeconds * 1000;
     const duration = Math.max(1, elapsedSeconds);
     const currentActiveTag = tags.find((t) => t.id === selectedTagId) || tags[0];
-    const endTimestamp = Date.now();
-    const startTimestamp = endTimestamp - duration * 1000;
 
     const newSession: FocusSession = {
       id: `session-${endTimestamp}`,
@@ -196,44 +246,11 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setIsRunning(false);
     setIsPaused(false);
+    setTimerStartTime(null);
+    setPausedAt(null);
+    setPausedDurationMs(0);
     setElapsedSeconds(0);
-  }, [elapsedSeconds, tags, selectedTagId]);
-
-  // Main stopwatch tick
-  useEffect(() => {
-    if (isRunning && !isPaused) {
-      timerRef.current = window.setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isRunning, isPaused]);
-
-  const startTimer = useCallback(() => {
-    playFocusSound('start');
-    sessionStartTimeRef.current = Date.now();
-    setIsRunning(true);
-    setIsPaused(false);
-  }, []);
-
-  const pauseTimer = useCallback(() => {
-    setIsPaused(true);
-  }, []);
-
-  const resumeTimer = useCallback(() => {
-    setIsPaused(false);
-  }, []);
-
-  const resetTimer = useCallback(() => {
-    setIsRunning(false);
-    setIsPaused(false);
-    setElapsedSeconds(0);
-  }, []);
+  }, [isPaused, pausedAt, timerStartTime, elapsedSeconds, tags, selectedTagId]);
 
   const updateBlockerConfig = useCallback((partial: Partial<FocusBlockerConfig>) => {
     setBlockerConfig((prev) => ({ ...prev, ...partial }));
@@ -460,10 +477,12 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const restartSession = useCallback((session: FocusSession) => {
     setSelectedTagId(session.tagId);
+    setTimerStartTime(Date.now());
+    setPausedAt(null);
+    setPausedDurationMs(0);
     setElapsedSeconds(0);
     setIsRunning(true);
     setIsPaused(false);
-    sessionStartTimeRef.current = Date.now();
     playFocusSound('start');
   }, []);
 
@@ -480,7 +499,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       tagName: targetTag.name,
       tagColor: targetTag.color,
       durationSeconds: duration,
-      mode: 'countdown',
+      mode: 'stopwatch',
       startedAt: data.startedAt,
       endedAt: data.endedAt,
     };
@@ -519,6 +538,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedMinutes,
         timeLeft,
         elapsedSeconds,
+        timerStartTime,
         isRunning,
         isPaused,
         selectedTag,
@@ -532,8 +552,6 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         startSiteStopwatch,
         stopSiteStopwatch,
         startTimer,
-
-
         pauseTimer,
         resumeTimer,
         resetTimer,

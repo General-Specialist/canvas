@@ -13,9 +13,10 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Sun, Moon, Trash, Copy, SquaresFour, Palette } from '@phosphor-icons/react';
+import { Sun, Moon, Trash, Copy, SquaresFour, Palette, FileText } from '@phosphor-icons/react';
 
 import { NoteNode } from './nodes/NoteNode';
+import { DocumentNode } from './nodes/DocumentNode';
 import { EdgeJunctionNode } from './nodes/EdgeJunctionNode';
 import { GroupNode, COLOR_THEMES } from './nodes/GroupNode';
 import { CustomEditableEdge } from './edges/CustomEditableEdge';
@@ -37,10 +38,13 @@ import {
   expandGroupEdges,
   sortNodesByDepth,
   autoWrapConnectedNodeTitles,
+  getGroupDepth,
+  isDescendantOf,
 } from '../utils/edgeUtils';
 
 const nodeTypes = {
   noteNode: NoteNode,
+  documentNode: DocumentNode,
   edgeJunction: EdgeJunctionNode,
   groupNode: GroupNode,
 };
@@ -149,21 +153,46 @@ const InnerCanvas: React.FC = () => {
 
         const groupId = `group-${Date.now()}`;
 
+        // Top-level selected nodes (nodes in selection whose parent is NOT also in selection)
+        const topSelectedNodes = selectedNodes.filter(
+          (n) => !n.parentId || !targetSet.has(n.parentId)
+        );
+
+        // Check if all selected top-level items share a common parent group
+        const firstParent = topSelectedNodes[0]?.parentId;
+        const allShareSameParent =
+          firstParent &&
+          topSelectedNodes.every((n) => n.parentId === firstParent);
+
+        const newGroupParentId = allShareSameParent ? firstParent : undefined;
+        const parentNode = newGroupParentId ? nodeMap.get(newGroupParentId) : undefined;
+        const parentAbsPos = parentNode ? getNodeAbsolutePos(parentNode, nodeMap) : { x: 0, y: 0 };
+
         const newGroupNode: CanvasNode = {
           id: groupId,
           type: 'groupNode',
-          position: { x: groupX, y: groupY },
+          parentId: newGroupParentId,
+          position: newGroupParentId
+            ? { x: Math.round(groupX - parentAbsPos.x), y: Math.round(groupY - parentAbsPos.y) }
+            : { x: groupX, y: groupY },
           style: { width: groupWidth, height: groupHeight },
           data: {
             title: '',
             color: 'featherGreen',
           },
           selected: true,
-          zIndex: -1,
         };
 
         const updatedNodes = currentNodes.map((n) => {
           if (targetSet.has(n.id)) {
+            // If n's parent is also in the selected set, keep n inside that parent
+            if (n.parentId && targetSet.has(n.parentId)) {
+              return {
+                ...n,
+                selected: false,
+              };
+            }
+
             const absPos = getNodeAbsolutePos(n, nodeMap);
             return {
               ...n,
@@ -201,11 +230,28 @@ const InnerCanvas: React.FC = () => {
 
       setEdges((eds) => expandGroupEdges(groupIdsToUngroup, currentNodes, eds) as CanvasEdge[]);
 
-      return currentNodes
+      const remainingNodes = currentNodes
         .filter((n) => !groupIdsToUngroup.has(n.id))
         .map((n) => {
           if (n.parentId && groupIdsToUngroup.has(n.parentId)) {
+            const parentGroupNode = nodeMap.get(n.parentId);
+            const grandparentParentId = parentGroupNode?.parentId;
             const absPos = getNodeAbsolutePos(n, nodeMap);
+
+            if (grandparentParentId && nodeMap.has(grandparentParentId)) {
+              const gpNode = nodeMap.get(grandparentParentId)!;
+              const gpAbsPos = getNodeAbsolutePos(gpNode, nodeMap);
+              return {
+                ...n,
+                parentId: grandparentParentId,
+                position: {
+                  x: Math.round(absPos.x - gpAbsPos.x),
+                  y: Math.round(absPos.y - gpAbsPos.y),
+                },
+                selected: true,
+              };
+            }
+
             return {
               ...n,
               parentId: undefined,
@@ -218,6 +264,8 @@ const InnerCanvas: React.FC = () => {
           }
           return n;
         });
+
+      return sortNodesByDepth(remainingNodes);
     });
   }, [setNodes, setEdges]);
 
@@ -344,27 +392,29 @@ const InnerCanvas: React.FC = () => {
 
   const handleNodeDragStop: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
-      if (draggedNode.type === 'groupNode') {
-        setNodes((currentNodes) => {
-          setEdges((prevEdges) => syncAutoEdges(currentNodes, prevEdges) as CanvasEdge[]);
-          return currentNodes;
-        });
-        return;
-      }
-
       setNodes((currentNodes) => {
         const nodeMap = new Map<string, CanvasNode>(currentNodes.map((n) => [n.id, n]));
         const targetNode = nodeMap.get(draggedNode.id);
         if (!targetNode) return currentNodes;
 
+        const isGroup = targetNode.type === 'groupNode';
         const absPos = getNodeAbsolutePos(targetNode, nodeMap);
         const { width: nodeW, height: nodeH } = getNodeDimensions(targetNode);
         const nodeCenterX = absPos.x + nodeW / 2;
         const nodeCenterY = absPos.y + nodeH / 2;
 
-        const groupNodes = currentNodes.filter((n) => n.type === 'groupNode' && n.id !== targetNode.id);
+        // Candidate groups: exclude self and (for groups) any of its descendants
+        const groupNodes = currentNodes.filter(
+          (n) =>
+            n.type === 'groupNode' &&
+            n.id !== targetNode.id &&
+            (!isGroup || !isDescendantOf(n.id, targetNode.id, nodeMap))
+        );
 
-        let containingGroup: CanvasNode | null = null;
+        // Find all groups containing the center of targetNode and pick the DEEPEST one
+        let bestContainingGroup: CanvasNode | null = null;
+        let maxDepth = -1;
+
         for (const group of groupNodes) {
           const groupAbsPos = getNodeAbsolutePos(group, nodeMap);
           const { width: groupW, height: groupH } = getNodeDimensions(group);
@@ -375,8 +425,11 @@ const InnerCanvas: React.FC = () => {
             nodeCenterY >= groupAbsPos.y &&
             nodeCenterY <= groupAbsPos.y + groupH
           ) {
-            containingGroup = group;
-            break;
+            const depth = getGroupDepth(group.id, nodeMap);
+            if (depth > maxDepth) {
+              maxDepth = depth;
+              bestContainingGroup = group;
+            }
           }
         }
 
@@ -396,10 +449,12 @@ const InnerCanvas: React.FC = () => {
         if (targetNode.parentId) {
           const currentParent = groupNodes.find((g) => g.id === targetNode.parentId);
           if (!currentParent || !isInsideParent(currentParent)) {
-            nextParentId = containingGroup?.id;
+            nextParentId = bestContainingGroup?.id;
+          } else if (bestContainingGroup && bestContainingGroup.id !== targetNode.parentId) {
+            nextParentId = bestContainingGroup.id;
           }
-        } else if (containingGroup) {
-          nextParentId = containingGroup.id;
+        } else if (bestContainingGroup) {
+          nextParentId = bestContainingGroup.id;
         }
 
         if (nextParentId !== targetNode.parentId) {
@@ -424,8 +479,9 @@ const InnerCanvas: React.FC = () => {
           return sorted;
         }
 
-        setEdges((eds) => syncAutoEdges(currentNodes, eds) as CanvasEdge[]);
-        return currentNodes;
+        const sorted = sortNodesByDepth(currentNodes);
+        setEdges((eds) => syncAutoEdges(sorted, eds) as CanvasEdge[]);
+        return sorted;
       });
     },
     [setNodes, setEdges]
@@ -471,6 +527,33 @@ const InnerCanvas: React.FC = () => {
           position: pos,
           style: { width: 260 },
           data: { title: '', content: '', updatedAt: new Date().toISOString() },
+        },
+      ]);
+    },
+    [setNodes]
+  );
+
+  const handleAddDocument = useCallback(
+    (position?: { x: number; y: number }) => {
+      const pos = position || {
+        x: 250 + Math.random() * 40,
+        y: 150 + Math.random() * 40,
+      };
+
+      setNodes((nds) => [
+        ...nds,
+        {
+          id: `doc-${Date.now()}`,
+          type: 'documentNode',
+          position: pos,
+          style: { width: 720, height: 540 },
+          data: {
+            title: '',
+            content: '',
+            fontFamily: 'sans',
+            updatedAt: new Date().toISOString(),
+          },
+          selected: true,
         },
       ]);
     },
@@ -617,9 +700,17 @@ const InnerCanvas: React.FC = () => {
 
       {menu && (
         <div
-          className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-48 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
+          className="fixed z-50 bg-[var(--sidebar-bg)] border border-[var(--border-color)] rounded-xl shadow-xl py-1 w-52 text-xs font-medium text-[var(--text-normal)] transition-colors duration-200"
           style={{ top: menu.y, left: menu.x }}
         >
+          <MenuItem
+            label="+ Add Document"
+            icon={<FileText className="w-4 h-4 text-[#1CB0F6]" />}
+            onClick={() => {
+              handleAddDocument(menu.flowPosition);
+              setMenu(null);
+            }}
+          />
           <MenuItem
             label="+ Add Note"
             onClick={() => {

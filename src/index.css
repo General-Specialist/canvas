@@ -170,6 +170,10 @@
   box-shadow: none !important;
 }
 
+.react-flow__node-groupNode.selected {
+  z-index: unset !important;
+}
+
 .react-flow__attribution {
   display: none !important;
 }

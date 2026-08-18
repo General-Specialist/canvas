@@ -3,7 +3,7 @@ import { NodeProps, useReactFlow, NodeResizer, useNodesData } from '@xyflow/reac
 import { NoteNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
 import { WikilinkText } from '../WikilinkText';
-import { syncAutoEdges } from '../../utils/edgeUtils';
+import { syncAutoEdges, autoLinkNodesForTitle } from '../../utils/edgeUtils';
 import { getGroupTheme } from './GroupNode';
 
 export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable, parentId }) => {
@@ -42,6 +42,21 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
     });
   };
 
+  const commitTitle = (finalTitle: string) => {
+    setIsEditingTitle(false);
+    const trimmed = finalTitle.trim();
+    if (trimmed.length >= 3) {
+      setNodes((nds) => {
+        const { updatedNodes, modified } = autoLinkNodesForTitle(nds, id, trimmed);
+        if (modified) {
+          setEdges((eds) => syncAutoEdges(updatedNodes, eds) as CanvasEdge[]);
+          return updatedNodes as any;
+        }
+        return nds;
+      });
+    }
+  };
+
   return (
     <div
       className={`relative w-full h-full min-w-[180px] min-h-[90px] rounded-xl ${borderStyleClass} bg-[var(--node-bg)] flex flex-col p-3.5 transition-all duration-150 ${
@@ -67,11 +82,11 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
           rows={1}
           value={titleText}
           onChange={(e) => updateNodeData({ title: e.target.value })}
-          onBlur={() => setIsEditingTitle(false)}
+          onBlur={() => commitTitle(titleText)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              setIsEditingTitle(false);
+              commitTitle(titleText);
               setIsEditingContent(true);
             } else if (e.key === 'Escape') {
               setIsEditingTitle(false);

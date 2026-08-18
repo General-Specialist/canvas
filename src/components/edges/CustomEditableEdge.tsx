@@ -28,7 +28,7 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
   label,
   data,
 }) => {
-  const { setEdges, getNodes } = useReactFlow();
+  const { setEdges, getNodes, getEdges } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
 
   const sourceNode = useInternalNode(source);
@@ -50,16 +50,22 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
     }
   }, [isEditing]);
 
-  const [edgePath, labelX, labelY] = getBezierPath(
-    floatingParams || {
-      sourceX,
-      sourceY,
-      sourcePosition,
-      targetX,
-      targetY,
-      targetPosition,
-    }
-  );
+  const allEdges = getEdges();
+  const hasReverseEdge = allEdges.some((e) => e.source === target && e.target === source);
+
+  const params = floatingParams || {
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  };
+
+  const [edgePath, labelX, labelY] = getBezierPath({
+    ...params,
+    curvature: hasReverseEdge ? 0.38 : 0.25,
+  });
 
   const saveLabel = () => {
     setIsEditing(false);
