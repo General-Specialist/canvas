@@ -29,7 +29,13 @@ export async function ensureTypstInitialized(): Promise<void> {
 
 // In-memory cache for ultra-fast instant 0ms lookups
 const memoryCache = new Map<string, string>();
-const STORAGE_PREFIX = 'typst_svg_cache_v2:';
+const TYPST_PREAMBLE = [
+  '#let bra(x) = $angle.l #x |$',
+  '#let ket(x) = $| #x angle.r$',
+  '#let braket(x, y) = $angle.l #x | #y angle.r$',
+].join('\n');
+
+const STORAGE_PREFIX = 'typst_svg_cache_v3:';
 
 function getCacheKey(content: string, isMath: boolean, displayMode: boolean): string {
   return `${isMath ? 'm' : 'd'}:${displayMode ? '1' : '0'}:${content.trim()}`;
@@ -134,11 +140,13 @@ export async function renderTypstToSvg(
       typstSource = [
         '#set page(width: auto, height: auto, margin: (x: 1.5pt, y: 1.5pt), fill: none)',
         '#set text(size: 13pt)',
+        TYPST_PREAMBLE,
         displayMode ? `$ ${trimmed} $` : `$${trimmed}$`,
       ].join('\n');
     } else {
       typstSource = [
         '#set page(width: auto, height: auto, margin: (x: 8pt, y: 8pt), fill: none)',
+        TYPST_PREAMBLE,
         trimmed,
       ].join('\n');
     }

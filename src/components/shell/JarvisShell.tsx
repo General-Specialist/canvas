@@ -2,15 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
   SquaresFour,
   Timer,
-  Sun,
-  Moon,
   Bed,
 } from '../icons';
 import { AppId, JARVIS_APPS } from '../../types/navigation';
 import { Canvas } from '../Canvas';
 import { FocusApp } from '../focus/FocusApp';
 import { SleepApp } from '../sleep/SleepApp';
-import { useTheme } from '../../context/ThemeContext';
 import { useFocus } from '../../context/FocusContext';
 import { loadGistSyncConfig, pushToGitHubGist, saveGistSyncConfig } from '../../utils/syncManager';
 
@@ -25,7 +22,6 @@ export const JarvisShell: React.FC = () => {
     return 'canvas';
   });
 
-  const { theme, toggleTheme } = useTheme();
   const { isRunning, isPaused, selectedTag } = useFocus();
 
   const handleSelectApp = (id: AppId) => {
@@ -83,7 +79,7 @@ export const JarvisShell: React.FC = () => {
   return (
     <div className="flex w-screen h-screen overflow-hidden bg-[var(--canvas-bg)] text-[var(--text-normal)]">
       {/* Ultra-Clean Fixed Icon Sidebar */}
-      <aside className="w-14 h-full bg-[var(--sidebar-bg)] border-r border-[var(--border-color)] flex flex-col justify-between items-center py-3 select-none z-30 shrink-0">
+      <aside className="w-14 h-full bg-[var(--sidebar-bg)] border-r border-[var(--border-color)] flex flex-col items-center py-3 select-none z-30 shrink-0">
         {/* Top App Navigation Icons */}
         <nav className="flex flex-col items-center gap-2">
           {JARVIS_APPS.map((app) => {
@@ -120,21 +116,6 @@ export const JarvisShell: React.FC = () => {
             );
           })}
         </nav>
-
-        {/* Bottom Theme Switcher */}
-        <div className="flex flex-col items-center pt-2 border-t border-[var(--border-color)] w-full px-2">
-          <button
-            onClick={toggleTheme}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-light)] hover:text-[var(--text-hover)] hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer"
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-          >
-            {theme === 'dark' ? (
-              <Sun size={20} className="text-[#e0af68]" />
-            ) : (
-              <Moon size={20} className="text-[#7aa2f7]" />
-            )}
-          </button>
-        </div>
       </aside>
 
       {/* Main Viewport */}

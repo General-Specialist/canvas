@@ -30,7 +30,7 @@ export interface JarvisDataBackupV1 {
     gcalFeeds: GoogleCalendarFeed[];
     gcalEvents?: GoogleCalendarEvent[];
     gcalShowPreference?: boolean;
-    theme?: 'dark' | 'light';
+    theme?: string;
     viewMode?: string;
     hourHeight?: number;
     activeApp?: string;

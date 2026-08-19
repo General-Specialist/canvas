@@ -190,7 +190,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
         return (
           <div
             key={idx}
-            className="my-1 pl-2 py-0.5 border-l-2 border-[#1CB0F6] bg-[#1CB0F6]/5 text-xs italic text-[var(--text-normal)] rounded-r"
+            className="my-1 pl-2 py-0.5 border-l-2 border-[var(--primary-accent)] bg-[var(--primary-accent)]/5 text-xs italic text-[var(--text-normal)] rounded-r"
           >
             <WikilinkText text={line.slice(2)} sourceNodeId={id} />
           </div>

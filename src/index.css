@@ -54,33 +54,6 @@
   --wikilink-hover: #bb9af7;
 }
 
-[data-theme="light"] {
-  /* Light Theme Mappings (Tokyo Night Day) */
-  --canvas-bg: #e9e9ed;
-  --sidebar-bg: #f2f3f7;
-  --icon-hover-bg: #e1e2e7;
-  --border-color: #d5d6db;
-  --sidebar-hover-bg: #e1e2e7;
-  --text-light: #6c728e;
-  --text-normal: #343b58;
-  --text-hover: #1a1b26;
-
-  --primary-accent: #2e7de9;
-  --primary-accent-hover: #226bcf;
-  --primary-accent-text: #ffffff;
-
-  --node-bg: #ffffff;
-  --node-border: #d5d6db;
-  --node-hover-ring: #8c6dfd;
-  --node-selected-ring: #2e7de9;
-  --handle-bg: #2e7de9;
-  --handle-border: #ffffff;
-  --edge-stroke: #a8aecb;
-  --edge-stroke-selected: #2e7de9;
-  --wikilink-color: #007197;
-  --wikilink-hover: #8c6dfd;
-}
-
 @layer base {
   body {
     margin: 0;
@@ -257,7 +230,7 @@ input[type=number] {
   max-width: 100%;
 }
 
-/* Ensure glyphs and math strokes inherit theme text color in dark/light mode */
+/* Ensure glyphs and math strokes inherit theme text color */
 .typst-render-output svg .outline_glyph,
 .typst-render-output svg .outline_glyph path,
 .typst-render-output svg .typst-text,

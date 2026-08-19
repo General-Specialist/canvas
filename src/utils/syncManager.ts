@@ -73,15 +73,12 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
   const gcalEvents = loadSavedGCalEvents();
   const gcalShowPreference = loadShowGCalPreference();
 
-  let theme: 'dark' | 'light' = 'dark';
+  let theme = 'dark';
   let viewMode = 'week';
   let hourHeight = 64;
   let activeApp = 'canvas';
 
   try {
-    const savedTheme = localStorage.getItem('jarvis_theme') || localStorage.getItem('canvas_theme') || localStorage.getItem('theme');
-    if (savedTheme === 'light' || savedTheme === 'dark') theme = savedTheme;
-
     const savedView = localStorage.getItem('jarvis_focus_view_mode_v1');
     if (savedView) viewMode = savedView;
 
@@ -164,10 +161,8 @@ export const deserializeAppData = (
       if (incoming.gcalEvents) saveGCalEvents(incoming.gcalEvents);
       if (typeof incoming.gcalShowPreference === 'boolean') saveShowGCalPreference(incoming.gcalShowPreference);
 
-      if (incoming.theme) {
-        localStorage.setItem('jarvis_theme', incoming.theme);
-        localStorage.setItem('canvas_theme', incoming.theme);
-      }
+      localStorage.setItem('jarvis_theme', 'dark');
+      localStorage.setItem('canvas_theme', 'dark');
 
       if (incoming.viewMode) localStorage.setItem('jarvis_focus_view_mode_v1', incoming.viewMode);
       if (incoming.hourHeight) localStorage.setItem('jarvis_focus_hour_height_v1', String(incoming.hourHeight));

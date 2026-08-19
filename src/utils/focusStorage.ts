@@ -25,14 +25,8 @@ export const saveBlockerConfig = (config: FocusBlockerConfig): void =>
 
 export const loadSavedTags = (): FocusTag[] => {
   const fallback = SEED_TAGS.length > 0 ? SEED_TAGS : DEFAULT_TAGS;
-  let parsed = getStorage<FocusTag[]>(STORAGE_KEY_TAGS, fallback);
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    parsed = fallback;
-    setStorage(STORAGE_KEY_TAGS, parsed);
-  }
-
-  const defaultTagMap = new Map(DEFAULT_TAGS.map((t) => [t.id, t.color]));
-  const defaultNameMap = new Map(DEFAULT_TAGS.map((t) => [t.name.toLowerCase(), t.color]));
+  const parsed = getStorage<FocusTag[]>(STORAGE_KEY_TAGS, fallback);
+  if (!Array.isArray(parsed)) return fallback;
 
   const seen = new Set<string>();
   const cleanedTags: FocusTag[] = [];
@@ -44,34 +38,24 @@ export const loadSavedTags = (): FocusTag[] => {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const defaultColor = defaultTagMap.get(tag.id) || defaultNameMap.get(key);
     cleanedTags.push({
       ...tag,
       name,
-      color: defaultColor || tag.color || '#82aaff',
     });
   }
 
-  const result = cleanedTags.length > 0 ? cleanedTags : fallback;
-  saveTags(result);
-  return result;
+  return cleanedTags.length > 0 ? cleanedTags : fallback;
 };
 
 export const saveTags = (tags: FocusTag[]): void =>
   setStorage(STORAGE_KEY_TAGS, tags);
 
 export const loadSavedSessions = (): FocusSession[] => {
-  let parsed = getStorage<FocusSession[]>(STORAGE_KEY_SESSIONS, SEED_SESSIONS);
-  if (!Array.isArray(parsed) || (parsed.length === 0 && SEED_SESSIONS.length > 0)) {
-    parsed = SEED_SESSIONS;
-    setStorage(STORAGE_KEY_SESSIONS, parsed);
-  }
-
-  const defaultTagMap = new Map(DEFAULT_TAGS.map((t) => [t.id, t.color]));
+  const parsed = getStorage<FocusSession[]>(STORAGE_KEY_SESSIONS, SEED_SESSIONS);
+  if (!Array.isArray(parsed)) return [];
 
   return parsed.map((s) => ({
     ...s,
-    tagColor: (s.tagId && defaultTagMap.get(s.tagId)) || s.tagColor || '#82aaff',
     tagName: s.tagName ? getDomainTagName(s.tagName) : s.tagName,
     taskTitle: s.taskTitle?.startsWith('Unblocked: ')
       ? `Unblocked: ${getDomainTagName(s.taskTitle.replace(/^Unblocked:\s*/, ''))}`
