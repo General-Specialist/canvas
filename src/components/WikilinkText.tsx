@@ -32,24 +32,23 @@ export interface WikilinkSegment {
   url?: string;
 }
 
-// Universal Tokenizer Regex:
+// Universal Robust Tokenizer Regex:
 // 1. $$...$$ display math
 // 2. \[...\] display math
 // 3. \(...\) inline math
 // 4. ![alt](url) markdown image
 // 5. [[target|alias]] wikilinks
 // 6. [label](url) markdown link
-// 7. $ math $ display math
-// 8. $math$ inline math
-// 9. ***bold italic*** / ___bold italic___
-// 10. **bold** / __bold__
-// 11. ~~strikethrough~~
-// 12. ==highlight==
-// 13. `inline code`
-// 14. *italic* / _italic_
-// 15. #tag
+// 7. $math$ inline math
+// 8. ***bold italic*** / ___bold italic___
+// 9. **bold** / __bold__
+// 10. ~~strikethrough~~
+// 11. ==highlight==
+// 12. `inline code`
+// 13. *italic*
+// 14. #tag
 export const TOKEN_REGEX =
-  /(\$\$(?:[\s\S]+?)\$\$|\\\[(?:[\s\S]+?)\\\]|\\\(.+?\\\)|!\[(?:[^\]]*)\]\((?:[^)]+)\)|\[\[(?:[^\]]+)\]\]|\[(?:[^\]]+)\]\((?:[^)]+)\)|\$\s+(?:[\s\S]+?)\s+\$|\$(?!\s)(?:[^\$\n]+?)(?<!\s)\$|\*\*\*[^*]+\*\*\*|___[^_]+___|\*\*[^*]+\*\*|(?<!\w)__[^\n_]+__(?!\w)|~~[^~]+~~|==[^=]+==|`[^`\n]+`|(?<!\*)\*[^*\n]+\*(?!\*)|(?<!\w)_[^\n_]+_(?!\w)|(?<=^|\s)#[a-zA-Z][\w\-]*(?=\s|$|[.,;:!?]))/g;
+  /(\$\$(?:[\s\S]+?)\$\$|\\\[(?:[\s\S]+?)\\\]|\\\(.+?\\\)|!\[(?:[^\]]*)\]\((?:[^)]+)\)|\[\[(?:[^\]]+)\]\]|\[(?:[^\]]+)\]\((?:[^)]+)\)|\$(?!\s)(?:\\\$|[^\$\n])+?(?<!\s)\$|\*\*\*[^*]+\*\*\*|___[^_]+___|\*\*[^*]+\*\*|(?<!\w)__[^\n_]+__(?!\w)|~~[^~]+~~|==[^=]+==|`[^`\n]+`|(?<!\*)\*[^*\n\s](?:[^*\n]*[^*\n\s])?\*(?!\*)|(?<=^|\s)#[a-zA-Z][\w\-]*(?=\s|$|[.,;:!?]))/g;
 
 export function parseWikilinks(text: string): WikilinkSegment[] {
   if (!text) return [];
@@ -98,11 +97,14 @@ export function parseWikilinks(text: string): WikilinkSegment[] {
 
       // 6. Dollar math: $...$
       if (token.startsWith('$') && token.endsWith('$') && token.length >= 2) {
-        const inner = token.slice(1, -1);
-        const isDisplay = (/^\s/.test(inner) && /\s$/.test(inner)) || inner.includes('\n');
+        const inner = token.slice(1, -1).trim();
+        // Disregard standalone currency numbers like $5 or $10.99
+        if (/^\d+(\.\d{1,2})?$/.test(inner)) {
+          return { type: 'text', content: token };
+        }
         return {
-          type: isDisplay ? 'math-display' : 'math-inline',
-          content: inner.trim(),
+          type: 'math-inline',
+          content: inner,
         };
       }
 
@@ -137,11 +139,8 @@ export function parseWikilinks(text: string): WikilinkSegment[] {
         return { type: 'code', content: token.slice(1, -1) };
       }
 
-      // 12. Italic: *text* or _text_
-      if (
-        (token.startsWith('*') && token.endsWith('*') && token.length >= 2) ||
-        (token.startsWith('_') && token.endsWith('_') && token.length >= 2)
-      ) {
+      // 12. Italic: *text*
+      if (token.startsWith('*') && token.endsWith('*') && token.length >= 2) {
         return { type: 'italic', content: token.slice(1, -1) };
       }
 
@@ -247,7 +246,7 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-[#1CB0F6] hover:text-[#1CB0F6]/80 underline decoration-[#1CB0F6]/40 hover:decoration-[#1CB0F6] font-medium transition-colors inline-flex items-center gap-0.5 cursor-pointer"
+              className="text-[var(--wikilink-color)] hover:underline font-medium transition-colors inline-flex items-center gap-0.5 cursor-pointer"
             >
               {seg.content || seg.url}
             </a>
@@ -301,7 +300,7 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
           return (
             <code
               key={idx}
-              className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[11px] text-[#FF4B4B] dark:text-[#FF9600]"
+              className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[11px] text-[#f7768e] dark:text-[#ff9e64]"
             >
               {seg.content}
             </code>
@@ -312,7 +311,7 @@ export const WikilinkText: React.FC<WikilinkTextProps> = ({
           return (
             <span
               key={idx}
-              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#58CC02]/15 text-[#58CC02] dark:text-[#89E219] border border-[#58CC02]/30 font-mono select-none"
+              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--primary-accent)]/15 text-[var(--primary-accent)] border border-[var(--primary-accent)]/30 font-mono select-none"
             >
               {seg.content}
             </span>

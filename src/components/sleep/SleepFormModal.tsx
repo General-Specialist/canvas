@@ -12,7 +12,7 @@ import {
   Plus,
   Minus,
   Lightning,
-} from '@phosphor-icons/react';
+} from '../icons';
 import {
   FALL_ASLEEP_OPTIONS,
   FallAsleepSpeed,
@@ -130,11 +130,11 @@ export const SleepFormModal: React.FC = () => {
 
   // Productivity color token helper
   const getProductivityColor = (score: number) => {
-    if (score >= 8.5) return 'text-[#58CC02] bg-[#58CC02]/15 border-[#58CC02]/30';
-    if (score >= 7.0) return 'text-[#89E219] bg-[#89E219]/15 border-[#89E219]/30';
-    if (score >= 5.0) return 'text-[#FFC800] bg-[#FFC800]/15 border-[#FFC800]/30';
-    if (score >= 3.5) return 'text-[#FF9600] bg-[#FF9600]/15 border-[#FF9600]/30';
-    return 'text-[#FF4B4B] bg-[#FF4B4B]/15 border-[#FF4B4B]/30';
+    if (score >= 8.5) return 'text-[#9ece6a] bg-[#9ece6a]/15 border-[#9ece6a]/30';
+    if (score >= 7.0) return 'text-[#73daca] bg-[#73daca]/15 border-[#73daca]/30';
+    if (score >= 5.0) return 'text-[#7aa2f7] bg-[#7aa2f7]/15 border-[#7aa2f7]/30';
+    if (score >= 3.5) return 'text-[#ff9e64] bg-[#ff9e64]/15 border-[#ff9e64]/30';
+    return 'text-[#f7768e] bg-[#f7768e]/15 border-[#f7768e]/30';
   };
 
   return (
@@ -167,33 +167,33 @@ export const SleepFormModal: React.FC = () => {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[#58CC02] focus:outline-none transition-colors"
+                className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[var(--primary-accent)] focus:outline-none transition-colors"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[var(--text-light)] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Moon size={14} className="text-[#1CB0F6]" /> Got in Bed
+                <Moon size={14} className="text-[#7dcfff]" /> Got in Bed
               </label>
               <input
                 type="time"
                 value={bedTime}
                 onChange={(e) => setBedTime(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[#58CC02] focus:outline-none transition-colors"
+                className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[var(--primary-accent)] focus:outline-none transition-colors"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[var(--text-light)] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <SunHorizon size={14} className="text-[#FFC800]" /> Wake Up Time
+                <SunHorizon size={14} className="text-[#e0af68]" /> Wake Up Time
               </label>
               <input
                 type="time"
                 value={wakeTime}
                 onChange={(e) => setWakeTime(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[#58CC02] focus:outline-none transition-colors"
+                className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[var(--primary-accent)] focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -243,7 +243,7 @@ export const SleepFormModal: React.FC = () => {
                     setFallAsleepSpeed(FALL_ASLEEP_OPTIONS[idx].value);
                   }
                 }}
-                className="flex-1 accent-[#58CC02] cursor-pointer"
+                className="flex-1 accent-[var(--primary-accent)] cursor-pointer"
               />
 
               <button
@@ -310,7 +310,7 @@ export const SleepFormModal: React.FC = () => {
                 step="0.5"
                 value={productivity}
                 onChange={(e) => setProductivity(parseFloat(e.target.value))}
-                className="flex-1 accent-[#58CC02] cursor-pointer"
+                className="flex-1 accent-[var(--primary-accent)] cursor-pointer"
               />
 
               <button
@@ -517,7 +517,7 @@ export const SleepFormModal: React.FC = () => {
             {/* Location (Purdue vs Parents House) */}
             <div className="p-3.5 rounded-xl bg-transparent border border-[var(--border-color)] space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-normal)]">
-                <MapPin size={16} className="text-[#58CC02]" />
+                <MapPin size={16} className="text-[var(--primary-accent)]" />
                 <span>Sleep Location</span>
               </div>
 
@@ -527,7 +527,7 @@ export const SleepFormModal: React.FC = () => {
                   onClick={() => setLocation('purdue')}
                   className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     location === 'purdue'
-                      ? 'border-[#58CC02] bg-[#58CC02]/15 text-[#58CC02]'
+                      ? 'border-[var(--primary-accent)] bg-[var(--primary-accent)]/15 text-[var(--primary-accent)]'
                       : 'border-[var(--border-color)] bg-transparent text-[var(--text-normal)] hover:bg-[var(--sidebar-hover-bg)]'
                   }`}
                 >
@@ -539,7 +539,7 @@ export const SleepFormModal: React.FC = () => {
                   onClick={() => setLocation('parents_house')}
                   className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     location === 'parents_house'
-                      ? 'border-[#1CB0F6] bg-[#1CB0F6]/15 text-[#1CB0F6]'
+                      ? 'border-[#7dcfff] bg-[#7dcfff]/15 text-[#7dcfff]'
                       : 'border-[var(--border-color)] bg-transparent text-[var(--text-normal)] hover:bg-[var(--sidebar-hover-bg)]'
                   }`}
                 >
@@ -551,7 +551,7 @@ export const SleepFormModal: React.FC = () => {
                   onClick={() => setLocation('other')}
                   className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     location === 'other'
-                      ? 'border-[#FF9600] bg-[#FF9600]/15 text-[#FF9600]'
+                      ? 'border-[#ff9e64] bg-[#ff9e64]/15 text-[#ff9e64]'
                       : 'border-[var(--border-color)] bg-transparent text-[var(--text-normal)] hover:bg-[var(--sidebar-hover-bg)]'
                   }`}
                 >
@@ -571,7 +571,7 @@ export const SleepFormModal: React.FC = () => {
               placeholder="E.g., Woke up feeling refreshed, had vivid dreams, room temperature was cold..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[#58CC02] focus:outline-none transition-colors"
+              className="w-full px-3 py-2 text-sm rounded-xl bg-transparent border border-[var(--border-color)] focus:border-[var(--primary-accent)] focus:outline-none transition-colors"
             />
           </div>
 
@@ -581,7 +581,7 @@ export const SleepFormModal: React.FC = () => {
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#FF4B4B] hover:bg-[#FF4B4B]/10 border border-[#FF4B4B]/30 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#f7768e] hover:bg-[#f7768e]/10 border border-[#f7768e]/30 transition-colors cursor-pointer"
               >
                 <Trash size={15} />
                 Delete Log
@@ -601,7 +601,7 @@ export const SleepFormModal: React.FC = () => {
 
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-[#58CC02] hover:bg-[#46a302] text-white transition-colors shadow-sm cursor-pointer"
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-[var(--primary-accent)] hover:brightness-110 text-white dark:text-[#16161e] transition-all shadow-sm cursor-pointer active:scale-95"
               >
                 <Check size={16} weight="bold" />
                 {editingEntry ? 'Update Log' : 'Save Sleep Log'}

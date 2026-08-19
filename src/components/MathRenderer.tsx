@@ -16,4 +16,3 @@ export const MathRenderer: React.FC<MathRendererProps> = React.memo(
 );
 
 MathRenderer.displayName = 'MathRenderer';
-

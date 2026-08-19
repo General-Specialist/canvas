@@ -145,7 +145,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isPaused,
       selectedTagId: selectedTag?.id || 'tag-coding',
       selectedTagName: selectedTag?.name || 'Focus',
-      selectedTagColor: selectedTag?.color || '#58CC02',
+      selectedTagColor: selectedTag?.color || '#7aa2f7',
       elapsedSeconds,
       mode: 'stopwatch',
       blockingEnabled: blockerConfig.enabled,

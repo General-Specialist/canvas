@@ -386,7 +386,7 @@ if (typeof window !== 'undefined') {
           lastSyncedAt: Date.now(),
           lastSyncStatus: 'success',
         });
-        console.log(`%c[JarvisSync] Synced to Gist: https://gist.github.com/${res.gistId}`, 'color: #58CC02; font-weight: bold;');
+        console.log(`%c[JarvisSync] Synced to Gist: https://gist.github.com/${res.gistId}`, 'color: #7aa2f7; font-weight: bold;');
       } else {
         console.error(`[JarvisSync] Push failed:`, res.error);
       }
@@ -400,7 +400,7 @@ if (typeof window !== 'undefined') {
       if (res.success && res.backup) {
         const applied = deserializeAppData(res.backup, mode);
         window.dispatchEvent(new CustomEvent('jarvis-data-restored'));
-        console.log(`%c[JarvisSync] Pulled & restored: ${applied.message}`, 'color: #58CC02; font-weight: bold;');
+        console.log(`%c[JarvisSync] Pulled & restored: ${applied.message}`, 'color: #7aa2f7; font-weight: bold;');
       } else {
         console.error(`[JarvisSync] Pull failed:`, res.error);
       }

@@ -3,10 +3,10 @@ import {
   X,
   Plus,
   Trash,
-  Globe,
+  GlobeIcon as Globe,
   Play,
   Stop,
-} from '@phosphor-icons/react';
+} from '../icons';
 import { useFocus } from '../../context/FocusContext';
 
 interface WebsiteBlockerModalProps {
@@ -111,13 +111,13 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
                 value={inputDomain}
                 onChange={(e) => setInputDomain(e.target.value)}
                 placeholder="Add website (e.g. youtube.com)..."
-                className="w-full bg-[var(--canvas-bg)] border border-[var(--border-color)] focus:border-[#58CC02] rounded-xl pl-9 pr-3 py-2 text-xs outline-none text-[var(--text-normal)] placeholder:text-[var(--text-light)]/50 transition-colors"
+                className="w-full bg-[var(--canvas-bg)] border border-[var(--border-color)] focus:border-[var(--primary-accent)] rounded-xl pl-9 pr-3 py-2 text-xs outline-none text-[var(--text-normal)] placeholder:text-[var(--text-light)]/50 transition-colors"
                 autoFocus
               />
             </div>
             <button
               type="submit"
-              className="px-3.5 py-2 bg-[#58CC02] text-black text-xs font-bold rounded-xl hover:brightness-110 flex items-center gap-1 cursor-pointer shrink-0 transition-transform active:scale-95"
+              className="px-3.5 py-2 bg-[var(--primary-accent)] text-white dark:text-[#16161e] text-xs font-bold rounded-xl hover:brightness-110 flex items-center gap-1 cursor-pointer shrink-0 transition-transform active:scale-95"
             >
               <Plus size={14} weight="bold" />
               Add
@@ -133,7 +133,7 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
                   key={preset}
                   type="button"
                   onClick={() => addBlockedDomain(preset)}
-                  className="text-[11px] px-2.5 py-0.5 rounded-lg bg-[var(--canvas-bg)] border border-[var(--border-color)] hover:border-[#58CC02] hover:text-[#58CC02] text-[var(--text-light)] transition-colors cursor-pointer"
+                  className="text-[11px] px-2.5 py-0.5 rounded-lg bg-[var(--canvas-bg)] border border-[var(--border-color)] hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)] text-[var(--text-light)] transition-colors cursor-pointer"
                 >
                   +{preset}
                 </button>
@@ -152,7 +152,7 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
                   key={domain}
                   className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
                     isRunning
-                      ? 'border-[#58CC02]/50 bg-[#58CC02]/10 ring-1 ring-[#58CC02]/30'
+                      ? 'border-[var(--primary-accent)]/50 bg-[var(--primary-accent)]/10 ring-1 ring-[var(--primary-accent)]/30'
                       : 'border-[var(--border-color)] bg-[var(--canvas-bg)] hover:border-[var(--text-light)]'
                   }`}
                 >
@@ -160,13 +160,13 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
                   <div className="flex items-center gap-2.5 truncate pr-2 min-w-0">
                     <span
                       className={`w-2 h-2 rounded-full shrink-0 ${
-                        isRunning ? 'bg-[#58CC02] animate-pulse' : 'bg-red-500'
+                        isRunning ? 'bg-[var(--primary-accent)] animate-pulse' : 'bg-[#f7768e]'
                       }`}
                     />
                     <span className="font-mono text-xs truncate font-medium">{domain}</span>
 
                     {isRunning && (
-                      <span className="px-2 py-0.5 rounded-md font-mono text-[11px] font-bold bg-[#58CC02] text-black">
+                      <span className="px-2 py-0.5 rounded-md font-mono text-[11px] font-bold bg-[var(--primary-accent)] text-white dark:text-[#16161e]">
                         {formatElapsed(startedAt)}
                       </span>
                     )}
@@ -179,7 +179,7 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
                         type="button"
                         onClick={() => stopSiteStopwatch(domain)}
                         title="Stop stopwatch & lock site"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f7768e] hover:bg-[#f7768e]/90 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                       >
                         <Stop size={13} weight="fill" />
                         Stop
@@ -189,7 +189,7 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
                         type="button"
                         onClick={() => startSiteStopwatch(domain)}
                         title="Start stopwatch & unlock site"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#58CC02] hover:brightness-110 text-black text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary-accent)] hover:brightness-110 text-white dark:text-[#16161e] text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                       >
                         <Play size={13} weight="fill" />
                         Start
@@ -199,7 +199,7 @@ export const WebsiteBlockerModal: React.FC<WebsiteBlockerModalProps> = ({
                     <button
                       type="button"
                       onClick={() => removeBlockedDomain(domain)}
-                      className="text-[var(--text-light)] hover:text-red-500 p-1.5 rounded-lg hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer ml-1"
+                      className="text-[var(--text-light)] hover:text-[#f7768e] p-1.5 rounded-lg hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer ml-1"
                       title={`Remove ${domain}`}
                     >
                       <Trash size={14} />

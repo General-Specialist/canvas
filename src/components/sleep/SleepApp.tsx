@@ -11,7 +11,7 @@ import {
   Plus,
   Lightning,
   Clock,
-} from '@phosphor-icons/react';
+} from '../icons';
 
 export const SleepApp: React.FC = () => {
   const { summary, openNewEntryForm } = useSleep();
@@ -28,7 +28,7 @@ export const SleepApp: React.FC = () => {
           {/* Primary Log Sleep Action */}
           <button
             onClick={openNewEntryForm}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-[#58CC02] hover:bg-[#46a302] text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-[var(--primary-accent)] hover:brightness-110 text-white dark:text-[#16161e] shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
           >
             <Plus size={18} weight="bold" />
             <span>Log Sleep Session</span>
@@ -39,7 +39,7 @@ export const SleepApp: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {/* KPI 1: Duration */}
           <div className="p-4 rounded-2xl border border-[var(--border-color)] flex items-center gap-3.5">
-            <Clock size={28} weight="bold" className="text-[#58CC02] shrink-0" />
+            <Clock size={28} weight="bold" className="text-[var(--primary-accent)] shrink-0" />
             <div className="min-w-0">
               <div className="text-xs font-semibold text-[var(--text-light)] truncate">
                 Sleep Duration
@@ -52,7 +52,7 @@ export const SleepApp: React.FC = () => {
 
           {/* KPI 2: Productivity */}
           <div className="p-4 rounded-2xl border border-[var(--border-color)] flex items-center gap-3.5">
-            <Lightning size={28} weight="fill" className="text-[#FFC800] shrink-0" />
+            <Lightning size={28} weight="fill" className="text-[#e0af68] shrink-0" />
             <div className="min-w-0">
               <div className="text-xs font-semibold text-[var(--text-light)] truncate">
                 Productivity
@@ -65,7 +65,7 @@ export const SleepApp: React.FC = () => {
 
           {/* KPI 3: Common Sleep Latency */}
           <div className="p-4 rounded-2xl border border-[var(--border-color)] flex items-center gap-3.5">
-            <Bed size={28} weight="fill" className="text-[#1CB0F6] shrink-0" />
+            <Bed size={28} weight="fill" className="text-[#7dcfff] shrink-0" />
             <div className="min-w-0">
               <div className="text-xs font-semibold text-[var(--text-light)] truncate">
                 Fall Asleep Latency

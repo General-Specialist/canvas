@@ -1,75 +1,84 @@
 @import "tailwindcss";
 
 :root {
-  /* Duolingo Official Brand Guidelines Color Palette */
+  /* Tokyo Night Official Color Palette */
+  --tokyo-bg: #1a1b26;
+  --tokyo-bg-dark: #16161e;
+  --tokyo-surface: #1f2335;
+  --tokyo-surface-bright: #24283b;
+  --tokyo-border: #292e42;
+  --tokyo-border-bright: #3b4261;
 
-  /* Core Brand Colors */
-  --duo-feather-green: #58CC02; /* Primary brand color */
-  --duo-mask-green: #89E219;    /* Secondary green for depth & backgrounds */
+  /* Tokyo Night Accents */
+  --tokyo-blue: #7aa2f7;
+  --tokyo-cyan: #7dcfff;
+  --tokyo-purple: #bb9af7;
+  --tokyo-magenta: #f7768e;
+  --tokyo-orange: #ff9e64;
+  --tokyo-yellow: #e0af68;
+  --tokyo-green: #9ece6a;
+  --tokyo-teal: #73daca;
 
-  /* Secondary & Accent Colors (UI & Illustrations) */
-  --duo-macaw: #1CB0F6;         /* Bright Blue / Links / Info */
-  --duo-cardinal: #FF4B4B;      /* Red / Errors / Health / Hearts */
-  --duo-bee: #FFC800;           /* Bright Yellow / Streaks / XP */
-  --duo-fox: #FF9600;           /* Orange / Gems / Achievements */
-  --duo-beetle: #CE82FF;        /* Bright Purple / Special Features */
-  --duo-humpback: #2B70C9;      /* Dark Blue / Secondary Accents */
-
-  /* Neutrals */
-  --duo-eel: #4B4B4B;           /* Dark Gray / Typography */
-  --duo-wolf: #777777;          /* Medium Gray / Secondary text */
-  --duo-hare: #AFAFAF;          /* Light Gray / Disabled states & borders */
-  --duo-swan: #E5E5E5;          /* Border lines & subtle fills */
-  --duo-polar: #F7F7F7;         /* Off-white background fill */
-  --duo-snow: #FFFFFF;          /* Pure White / Primary backgrounds */
+  /* Tokyo Night Neutrals */
+  --tokyo-text: #c0caf5;
+  --tokyo-text-muted: #787c99;
+  --tokyo-text-dark: #565f89;
+  --tokyo-text-bright: #ffffff;
 }
-
 
 :root,
 [data-theme="dark"] {
-  /* Dark Theme Mappings using Duolingo Neutrals & Brand Colors */
-  --canvas-bg: #0F1F24;
-  --sidebar-bg: #0F1F24;
-  --icon-hover-bg: #1B2B31;
-  --border-color: #243740;
-  --sidebar-hover-bg: #1B2B31;
-  --text-light: #8E9BA0;
-  --text-normal: #E5E5E5;
-  --text-hover: #FFFFFF;
+  /* Dark Theme Mappings (Tokyo Night Storm / Night) */
+  --canvas-bg: #1a1b26;
+  --sidebar-bg: #16161e;
+  --icon-hover-bg: #24283b;
+  --border-color: #292e42;
+  --sidebar-hover-bg: #1f2335;
+  --text-light: #787c99;
+  --text-normal: #c0caf5;
+  --text-hover: #ffffff;
 
-  --node-bg: #15272D;
-  --node-border: #243740;
-  --node-hover-ring: var(--duo-mask-green);
-  --node-selected-ring: var(--duo-feather-green);
-  --handle-bg: var(--duo-feather-green);
-  --handle-border: var(--duo-snow);
-  --edge-stroke: #37464F;
-  --edge-stroke-selected: var(--duo-feather-green);
-  --wikilink-color: var(--duo-macaw);
-  --wikilink-hover: var(--duo-beetle);
+  --primary-accent: #7aa2f7;
+  --primary-accent-hover: #608ef6;
+  --primary-accent-text: #16161e;
+
+  --node-bg: #1f2335;
+  --node-border: #292e42;
+  --node-hover-ring: #bb9af7;
+  --node-selected-ring: #7aa2f7;
+  --handle-bg: #7aa2f7;
+  --handle-border: #16161e;
+  --edge-stroke: #3b4261;
+  --edge-stroke-selected: #7aa2f7;
+  --wikilink-color: #7dcfff;
+  --wikilink-hover: #bb9af7;
 }
 
 [data-theme="light"] {
-  /* Light Theme Mappings using Duolingo Neutrals & Brand Colors */
-  --canvas-bg: var(--duo-polar);
-  --sidebar-bg: var(--duo-snow);
-  --icon-hover-bg: var(--duo-swan);
-  --border-color: var(--duo-swan);
-  --sidebar-hover-bg: var(--duo-swan);
-  --text-light: var(--duo-wolf);
-  --text-normal: var(--duo-eel);
-  --text-hover: #111111;
+  /* Light Theme Mappings (Tokyo Night Day) */
+  --canvas-bg: #e9e9ed;
+  --sidebar-bg: #f2f3f7;
+  --icon-hover-bg: #e1e2e7;
+  --border-color: #d5d6db;
+  --sidebar-hover-bg: #e1e2e7;
+  --text-light: #6c728e;
+  --text-normal: #343b58;
+  --text-hover: #1a1b26;
 
-  --node-bg: var(--duo-snow);
-  --node-border: var(--duo-swan);
-  --node-hover-ring: var(--duo-mask-green);
-  --node-selected-ring: var(--duo-feather-green);
-  --handle-bg: var(--duo-feather-green);
-  --handle-border: var(--duo-snow);
-  --edge-stroke: var(--duo-hare);
-  --edge-stroke-selected: var(--duo-feather-green);
-  --wikilink-color: var(--duo-macaw);
-  --wikilink-hover: var(--duo-humpback);
+  --primary-accent: #2e7de9;
+  --primary-accent-hover: #226bcf;
+  --primary-accent-text: #ffffff;
+
+  --node-bg: #ffffff;
+  --node-border: #d5d6db;
+  --node-hover-ring: #8c6dfd;
+  --node-selected-ring: #2e7de9;
+  --handle-bg: #2e7de9;
+  --handle-border: #ffffff;
+  --edge-stroke: #a8aecb;
+  --edge-stroke-selected: #2e7de9;
+  --wikilink-color: #007197;
+  --wikilink-hover: #8c6dfd;
 }
 
 @layer base {
@@ -171,6 +180,11 @@
   display: none !important;
 }
 
+.react-flow__edgelabel-renderer {
+  z-index: 1000 !important;
+  pointer-events: none !important;
+}
+
 /* Hide scrollbars globally */
 ::-webkit-scrollbar {
   display: none !important;
@@ -192,20 +206,6 @@ input[type=number]::-webkit-outer-spin-button {
 input[type=number] {
   -moz-appearance: textfield;
   appearance: textfield;
-}
-
-/* KaTeX custom styles for canvas nodes */
-.katex {
-  font-size: 1.05em;
-  color: inherit;
-}
-
-.katex-display {
-  margin: 0.35em 0 !important;
-}
-
-.katex-display > .katex {
-  white-space: normal;
 }
 
 /* Typst math and document custom styles */

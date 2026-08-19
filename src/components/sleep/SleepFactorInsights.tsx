@@ -7,7 +7,7 @@ import {
   WarningCircle,
   Sparkle,
   Lightning,
-} from '@phosphor-icons/react';
+} from '../icons';
 
 
 
@@ -29,7 +29,7 @@ export const SleepFactorInsights: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Sparkle size={18} className="text-[#CE82FF]" />
+        <Sparkle size={18} className="text-[#bb9af7]" />
         <h3 className="text-sm font-bold text-[var(--text-hover)]">
           Factor Correlations & Recovery Insights
         </h3>
@@ -40,7 +40,7 @@ export const SleepFactorInsights: React.FC = () => {
         <div className="p-4 rounded-2xl border border-[var(--border-color)] flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-normal)]">
-              <MapPin size={16} className="text-[#58CC02]" />
+              <MapPin size={16} className="text-[var(--primary-accent)]" />
               <span>Location Dynamics</span>
             </div>
             <span className="text-[11px] text-[var(--text-light)]">Purdue vs. Parents</span>
@@ -58,7 +58,7 @@ export const SleepFactorInsights: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-extrabold text-[#58CC02] flex items-center justify-end gap-1">
+                <div className="text-sm font-extrabold text-[#9ece6a] flex items-center justify-end gap-1">
                   <Lightning size={13} weight="fill" />
                   {purdueProd !== null ? purdueProd.toFixed(1) : '—'}
                 </div>
@@ -77,7 +77,7 @@ export const SleepFactorInsights: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-extrabold text-[#1CB0F6] flex items-center justify-end gap-1">
+                <div className="text-sm font-extrabold text-[#7dcfff] flex items-center justify-end gap-1">
                   <Lightning size={13} weight="fill" />
                   {parentsProd !== null ? parentsProd.toFixed(1) : '—'}
                 </div>
@@ -91,7 +91,7 @@ export const SleepFactorInsights: React.FC = () => {
         <div className="p-4 rounded-2xl border border-[var(--border-color)] flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-normal)]">
-              <Pill size={16} className="text-[#1CB0F6]" />
+              <Pill size={16} className="text-[#7dcfff]" />
               <span>Magnesium Glycinate</span>
             </div>
             <span className="text-[11px] text-[var(--text-light)]">Dosage vs. Focus</span>
@@ -105,12 +105,12 @@ export const SleepFactorInsights: React.FC = () => {
                   className="p-2 rounded-xl border border-[var(--border-color)] flex items-center justify-between text-xs"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#1CB0F6]">{item.dose} mg</span>
+                    <span className="font-bold text-[#7dcfff]">{item.dose} mg</span>
                     <span className="text-[10px] text-[var(--text-light)]">
                       ({item.count} {item.count === 1 ? 'night' : 'nights'})
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 font-bold text-[#58CC02]">
+                  <div className="flex items-center gap-1 font-bold text-[#9ece6a]">
                     <Lightning size={12} weight="fill" />
                     <span>{item.avgProductivity.toFixed(1)} / 10</span>
                   </div>
@@ -128,7 +128,7 @@ export const SleepFactorInsights: React.FC = () => {
         <div className="p-4 rounded-2xl border border-[var(--border-color)] flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-normal)]">
-              <WarningCircle size={16} className="text-[#FF4B4B]" />
+              <WarningCircle size={16} className="text-[#f7768e]" />
               <span>Triggering Events</span>
             </div>
             <span className="text-[11px] text-[var(--text-light)]">Stress Resilience</span>
@@ -141,7 +141,7 @@ export const SleepFactorInsights: React.FC = () => {
                 <div className="text-[11px] text-[var(--text-light)]">No triggering event</div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-extrabold text-[#58CC02] flex items-center justify-end gap-1">
+                <div className="text-sm font-extrabold text-[#9ece6a] flex items-center justify-end gap-1">
                   <Lightning size={13} weight="fill" />
                   {eventImpact.withoutEventAvgProductivity !== null
                     ? eventImpact.withoutEventAvgProductivity.toFixed(1)
@@ -153,11 +153,11 @@ export const SleepFactorInsights: React.FC = () => {
 
             <div className="p-2.5 rounded-xl border border-[var(--border-color)] flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold text-[#FF4B4B]">High Stress Event</div>
+                <div className="text-xs font-semibold text-[#f7768e]">High Stress Event</div>
                 <div className="text-[11px] text-[var(--text-light)]">Triggering event logged</div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-extrabold text-[#FF4B4B] flex items-center justify-end gap-1">
+                <div className="text-sm font-extrabold text-[#f7768e] flex items-center justify-end gap-1">
                   <Lightning size={13} weight="fill" />
                   {eventImpact.withEventAvgProductivity !== null
                     ? eventImpact.withEventAvgProductivity.toFixed(1)

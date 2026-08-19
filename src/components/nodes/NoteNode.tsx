@@ -1,20 +1,15 @@
 import React, { useState, memo, useCallback } from 'react';
-import { NodeProps, useReactFlow, NodeResizer, useNodesData } from '@xyflow/react';
-import { Check } from '@phosphor-icons/react';
+import { NodeProps, useReactFlow, NodeResizer } from '@xyflow/react';
+import { Check } from '../icons';
 import { NoteNodeData, CanvasEdge } from '../../types/canvas';
 import { FourWayHandles } from './FourWayHandles';
 import { WikilinkText } from '../WikilinkText';
 import { syncAutoEdges, autoLinkNodesForTitle } from '../../utils/edgeUtils';
-import { getGroupTheme } from './GroupNode';
 
-export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable, parentId }) => {
+export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConnectable }) => {
   const { setNodes, setEdges } = useReactFlow();
   const nodeData = data as unknown as NoteNodeData;
-
-  const parentNode = useNodesData(parentId || '');
-  const parentColor = (parentNode?.data as Record<string, any>)?.color;
-  const parentTheme = parentId && parentNode ? getGroupTheme(parentColor) : null;
-  const borderStyleClass = parentTheme ? `border-2 ${parentTheme.border}` : 'border border-[var(--node-border)]';
+  const borderStyleClass = 'border border-[var(--node-border)]';
 
   const titleText = nodeData.title || '';
   const contentText = nodeData.content || '';
@@ -109,8 +104,8 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
             <div
               className={`w-3.5 h-3.5 rounded mt-0.5 flex items-center justify-center transition-colors border shrink-0 ${
                 isChecked
-                  ? 'bg-[#58CC02] border-[#58CC02] text-white'
-                  : 'border-[var(--text-light)] hover:border-[#58CC02] bg-transparent'
+                  ? 'bg-[var(--primary-accent)] border-[var(--primary-accent)] text-white dark:text-[#16161e]'
+                  : 'border-[var(--text-light)] hover:border-[var(--primary-accent)] bg-transparent'
               }`}
             >
               {isChecked && <Check size={10} weight="bold" />}
@@ -139,7 +134,7 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
             style={{ paddingLeft: `${indentLevel * 12}px` }}
             className="flex items-start gap-1.5 my-0.5"
           >
-            <span className="text-[#58CC02] font-bold text-xs shrink-0 select-none">{bulletIcon}</span>
+            <span className="text-[var(--primary-accent)] font-bold text-xs shrink-0 select-none">{bulletIcon}</span>
             <span className="flex-1 text-xs leading-relaxed text-[var(--text-normal)]">
               <WikilinkText text={bulletMatch[3]} sourceNodeId={id} />
             </span>
@@ -235,8 +230,8 @@ export const NoteNode: React.FC<NodeProps> = memo(({ id, data, selected, isConne
         minWidth={180}
         minHeight={90}
         isVisible={selected}
-        lineClassName="!border-[#58CC02] !border-dashed"
-        handleClassName="!w-3 !h-3 !bg-[#58CC02] !border-2 !border-white !rounded-full"
+        lineClassName="!border-[var(--primary-accent)] !border-dashed"
+        handleClassName="!w-3 !h-3 !bg-[var(--primary-accent)] !border-2 !border-white dark:!border-[#16161e] !rounded-full"
       />
 
       {/* Title Field */}

@@ -8,22 +8,31 @@ import {
 } from '../types/focus';
 
 import { getStorage, setStorage } from './storage';
+import { SEED_TAGS, SEED_SESSIONS, SEED_BLOCKER_CONFIG } from '../data/seedData';
 
 const STORAGE_KEY_TAGS = 'jarvis_focus_tags_v1';
 const STORAGE_KEY_SESSIONS = 'jarvis_focus_sessions_v1';
 const STORAGE_KEY_BLOCKER = 'jarvis_focus_blocker_v1';
 
 export const loadSavedBlockerConfig = (): FocusBlockerConfig => {
-  const parsed = getStorage<FocusBlockerConfig>(STORAGE_KEY_BLOCKER, DEFAULT_BLOCKER_CONFIG);
-  return { ...DEFAULT_BLOCKER_CONFIG, ...parsed };
+  const base = { ...DEFAULT_BLOCKER_CONFIG, ...SEED_BLOCKER_CONFIG };
+  const parsed = getStorage<FocusBlockerConfig>(STORAGE_KEY_BLOCKER, base);
+  return { ...base, ...parsed };
 };
 
 export const saveBlockerConfig = (config: FocusBlockerConfig): void =>
   setStorage(STORAGE_KEY_BLOCKER, config);
 
 export const loadSavedTags = (): FocusTag[] => {
-  const parsed = getStorage<FocusTag[]>(STORAGE_KEY_TAGS, DEFAULT_TAGS);
-  if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_TAGS;
+  const fallback = SEED_TAGS.length > 0 ? SEED_TAGS : DEFAULT_TAGS;
+  let parsed = getStorage<FocusTag[]>(STORAGE_KEY_TAGS, fallback);
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    parsed = fallback;
+    setStorage(STORAGE_KEY_TAGS, parsed);
+  }
+
+  const defaultTagMap = new Map(DEFAULT_TAGS.map((t) => [t.id, t.color]));
+  const defaultNameMap = new Map(DEFAULT_TAGS.map((t) => [t.name.toLowerCase(), t.color]));
 
   const seen = new Set<string>();
   const cleanedTags: FocusTag[] = [];
@@ -34,21 +43,35 @@ export const loadSavedTags = (): FocusTag[] => {
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    cleanedTags.push({ ...tag, name });
+
+    const defaultColor = defaultTagMap.get(tag.id) || defaultNameMap.get(key);
+    cleanedTags.push({
+      ...tag,
+      name,
+      color: defaultColor || tag.color || '#82aaff',
+    });
   }
 
-  return cleanedTags.length > 0 ? cleanedTags : DEFAULT_TAGS;
+  const result = cleanedTags.length > 0 ? cleanedTags : fallback;
+  saveTags(result);
+  return result;
 };
 
 export const saveTags = (tags: FocusTag[]): void =>
   setStorage(STORAGE_KEY_TAGS, tags);
 
 export const loadSavedSessions = (): FocusSession[] => {
-  const parsed = getStorage<FocusSession[]>(STORAGE_KEY_SESSIONS, []);
-  if (!Array.isArray(parsed)) return [];
+  let parsed = getStorage<FocusSession[]>(STORAGE_KEY_SESSIONS, SEED_SESSIONS);
+  if (!Array.isArray(parsed) || (parsed.length === 0 && SEED_SESSIONS.length > 0)) {
+    parsed = SEED_SESSIONS;
+    setStorage(STORAGE_KEY_SESSIONS, parsed);
+  }
+
+  const defaultTagMap = new Map(DEFAULT_TAGS.map((t) => [t.id, t.color]));
 
   return parsed.map((s) => ({
     ...s,
+    tagColor: (s.tagId && defaultTagMap.get(s.tagId)) || s.tagColor || '#82aaff',
     tagName: s.tagName ? getDomainTagName(s.tagName) : s.tagName,
     taskTitle: s.taskTitle?.startsWith('Unblocked: ')
       ? `Unblocked: ${getDomainTagName(s.taskTitle.replace(/^Unblocked:\s*/, ''))}`

@@ -15,7 +15,7 @@ import {
   Pill,
   WarningCircle,
   MagnifyingGlass,
-} from '@phosphor-icons/react';
+} from '../icons';
 
 export const SleepHistoryTable: React.FC = () => {
   const {
@@ -61,11 +61,11 @@ export const SleepHistoryTable: React.FC = () => {
   };
 
   const getProductivityColor = (score: number) => {
-    if (score >= 8.5) return 'text-[#58CC02] bg-[#58CC02]/15 border-[#58CC02]/30';
-    if (score >= 7.0) return 'text-[#89E219] bg-[#89E219]/15 border-[#89E219]/30';
-    if (score >= 5.0) return 'text-[#FFC800] bg-[#FFC800]/15 border-[#FFC800]/30';
-    if (score >= 3.5) return 'text-[#FF9600] bg-[#FF9600]/15 border-[#FF9600]/30';
-    return 'text-[#FF4B4B] bg-[#FF4B4B]/15 border-[#FF4B4B]/30';
+    if (score >= 8.5) return 'text-[#9ece6a] bg-[#9ece6a]/15 border-[#9ece6a]/30';
+    if (score >= 7.0) return 'text-[#73daca] bg-[#73daca]/15 border-[#73daca]/30';
+    if (score >= 5.0) return 'text-[#7aa2f7] bg-[#7aa2f7]/15 border-[#7aa2f7]/30';
+    if (score >= 3.5) return 'text-[#ff9e64] bg-[#ff9e64]/15 border-[#ff9e64]/30';
+    return 'text-[#f7768e] bg-[#f7768e]/15 border-[#f7768e]/30';
   };
 
   return (
@@ -83,7 +83,7 @@ export const SleepHistoryTable: React.FC = () => {
             placeholder="Search dates, notes, medicines..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-transparent border border-[var(--border-color)] text-[var(--text-normal)] focus:border-[#58CC02] focus:outline-none transition-colors"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-transparent border border-[var(--border-color)] text-[var(--text-normal)] focus:border-[var(--primary-accent)] focus:outline-none transition-colors"
           />
         </div>
 
@@ -105,7 +105,7 @@ export const SleepHistoryTable: React.FC = () => {
               onClick={() => setFilterLocation('purdue')}
               className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 filterLocation === 'purdue'
-                  ? 'bg-[#58CC02]/20 text-[#58CC02] font-bold'
+                  ? 'bg-[var(--primary-accent)]/20 text-[var(--primary-accent)] font-bold'
                   : 'text-[var(--text-light)] hover:text-[var(--text-normal)]'
               }`}
             >
@@ -115,7 +115,7 @@ export const SleepHistoryTable: React.FC = () => {
               onClick={() => setFilterLocation('parents_house')}
               className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 filterLocation === 'parents_house'
-                  ? 'bg-[#1CB0F6]/20 text-[#1CB0F6] font-bold'
+                  ? 'bg-[#7dcfff]/20 text-[#7dcfff] font-bold'
                   : 'text-[var(--text-light)] hover:text-[var(--text-normal)]'
               }`}
             >
@@ -156,7 +156,7 @@ export const SleepHistoryTable: React.FC = () => {
               <div
                 key={entry.id}
                 onClick={() => openEditEntryForm(entry)}
-                className="p-4 rounded-2xl bg-transparent border border-[var(--border-color)] hover:border-[#58CC02]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group shadow-sm hover:shadow-md"
+                className="p-4 rounded-2xl bg-transparent border border-[var(--border-color)] hover:border-[var(--primary-accent)]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group shadow-sm hover:shadow-md"
               >
                 {/* Left: Date & Times */}
                 <div className="flex items-center gap-3">
@@ -174,7 +174,7 @@ export const SleepHistoryTable: React.FC = () => {
                       <span className="text-sm font-bold text-[var(--text-hover)]">
                         {formatFriendlyDate(entry.date)}
                       </span>
-                      <span className="text-xs font-semibold text-[#58CC02]">
+                      <span className="text-xs font-semibold text-[var(--primary-accent)]">
                         {formatSleepDuration(dur)}
                       </span>
                     </div>
@@ -200,9 +200,9 @@ export const SleepHistoryTable: React.FC = () => {
                   <span
                     className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold border ${
                       entry.factors.location === 'purdue'
-                        ? 'border-[#58CC02]/30 bg-[#58CC02]/10 text-[#58CC02]'
+                        ? 'border-[var(--primary-accent)]/30 bg-[var(--primary-accent)]/10 text-[var(--primary-accent)]'
                         : entry.factors.location === 'parents_house'
-                        ? 'border-[#1CB0F6]/30 bg-[#1CB0F6]/10 text-[#1CB0F6]'
+                        ? 'border-[#7dcfff]/30 bg-[#7dcfff]/10 text-[#7dcfff]'
                         : 'border-[var(--border-color)] bg-transparent text-[var(--text-light)]'
                     }`}
                   >
@@ -215,7 +215,7 @@ export const SleepHistoryTable: React.FC = () => {
 
                   {/* Magnesium Glycinate */}
                   {entry.factors.magnesiumGlycinateMg > 0 && (
-                    <span className="px-2 py-0.5 rounded-lg text-[11px] font-semibold border border-[#1CB0F6]/30 bg-[#1CB0F6]/10 text-[#1CB0F6] flex items-center gap-1">
+                    <span className="px-2 py-0.5 rounded-lg text-[11px] font-semibold border border-[#7dcfff]/30 bg-[#7dcfff]/10 text-[#7dcfff] flex items-center gap-1">
                       <Pill size={12} />
                       {entry.factors.magnesiumGlycinateMg}mg Mg
                     </span>

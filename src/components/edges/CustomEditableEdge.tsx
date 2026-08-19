@@ -7,7 +7,7 @@ import {
   useReactFlow,
   useInternalNode,
 } from '@xyflow/react';
-import { X } from '@phosphor-icons/react';
+import { X } from '../icons';
 
 import { expandGroupEdges, getFloatingEdgeParams } from '../../utils/edgeUtils';
 import { CanvasEdge } from '../../types/canvas';
@@ -117,7 +117,7 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
       <EdgeLabelRenderer>
         <div
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
-          className="nodrag nopan absolute pointer-events-auto flex items-center gap-1.5 z-20 select-none"
+          className="nodrag nopan absolute pointer-events-auto flex items-center gap-1.5 z-[1000] select-none"
         >
           {isEditing ? (
             <input
@@ -133,7 +133,7 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
                 }
               }}
               placeholder="Edge label..."
-              className="bg-[var(--sidebar-bg)] border border-[#58CC02] text-[var(--text-normal)] text-xs px-2.5 py-1 rounded-lg shadow-lg focus:outline-none min-w-[80px] max-w-[200px] text-center font-medium"
+              className="bg-[var(--sidebar-bg)] border border-[var(--primary-accent)] text-[var(--text-normal)] text-xs px-2.5 py-1 rounded-lg shadow-lg focus:outline-none min-w-[80px] max-w-[200px] text-center font-medium"
             />
           ) : (
             <>
@@ -164,7 +164,7 @@ export const CustomEditableEdge: React.FC<EdgeProps> = ({
               {selected && (
                 <button
                   onClick={deleteEdge}
-                  className="bg-[var(--sidebar-hover-bg)] border border-[var(--border-color)] text-[var(--text-hover)] p-1 rounded-full hover:bg-[#FF4B4B]/10 hover:text-[#FF4B4B] transition-all cursor-pointer shadow-sm"
+                  className="bg-[var(--sidebar-hover-bg)] border border-[var(--border-color)] text-[var(--text-hover)] p-1 rounded-full hover:bg-[#f7768e]/15 hover:text-[#f7768e] hover:border-[#f7768e]/40 transition-all cursor-pointer shadow-sm"
                   title="Delete Edge"
                 >
                   <X className="w-3 h-3" />

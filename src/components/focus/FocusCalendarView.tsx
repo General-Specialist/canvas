@@ -10,8 +10,10 @@ import {
   Check,
   Plus,
   Minus,
-  Tag as TagIcon,
-} from '@phosphor-icons/react';
+  TagIcon,
+  ShieldCheck,
+  CalendarCheck,
+} from '../icons';
 import { useFocus } from '../../context/FocusContext';
 import { FocusSession, getDomainTagName } from '../../types/focus';
 import {
@@ -33,7 +35,6 @@ import { GoogleCalendarModal } from './GoogleCalendarModal';
 import { GoogleEventDetailsModal } from './GoogleEventDetailsModal';
 import { useGoogleCalendar } from '../../context/GoogleCalendarContext';
 import { GoogleCalendarEvent } from '../../types/googleCalendar';
-import { ShieldCheck, CalendarCheck } from '@phosphor-icons/react';
 
 
 const START_HOUR = 7; // 7 AM
@@ -188,7 +189,7 @@ export const FocusCalendarView: React.FC = () => {
     return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const activeColor = selectedTag?.color || '#58CC02';
+  const activeColor = selectedTag?.color || '#7aa2f7';
 
   const filteredTags = tags.filter((t) =>
     t.name.toLowerCase().includes(tagSearch.toLowerCase().trim())
@@ -477,7 +478,7 @@ export const FocusCalendarView: React.FC = () => {
                   type="button"
                   onClick={() => finishSession()}
                   title="Stop & Log Session"
-                  className="w-7 h-7 rounded-full flex items-center justify-center bg-[#FF4B4B] hover:bg-[#E03A3A] text-white transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+                  className="w-7 h-7 rounded-full flex items-center justify-center bg-[#f7768e] hover:bg-[#f7768e]/90 text-white transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
                 >
                   <Stop size={13} weight="fill" />
                 </button>
@@ -568,14 +569,14 @@ export const FocusCalendarView: React.FC = () => {
               title="LibreWolf Website Blocker"
               className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 blockerConfig.enabled
-                  ? 'border-[#58CC02]/40 text-[#58CC02] bg-[#58CC02]/10 hover:bg-[#58CC02]/20'
+                  ? 'border-[var(--primary-accent)]/40 text-[var(--primary-accent)] bg-[var(--primary-accent)]/10 hover:bg-[var(--primary-accent)]/20'
                   : 'border-[var(--border-color)] text-[var(--text-light)] hover:text-[var(--text-normal)] hover:bg-[var(--sidebar-hover-bg)]'
               }`}
             >
               <ShieldCheck size={14} weight={blockerConfig.enabled ? 'fill' : 'bold'} />
               <span className="hidden sm:inline">Blocker</span>
               {blockerConfig.enabled && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#58CC02]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary-accent)]" />
               )}
             </button>
 
@@ -646,7 +647,7 @@ export const FocusCalendarView: React.FC = () => {
                       <div
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                           isCurrent
-                            ? 'border-2 border-[#58CC02] text-[#58CC02]'
+                            ? 'border-2 border-[var(--primary-accent)] text-[var(--primary-accent)]'
                             : 'text-[var(--text-hover)]'
                         }`}
                       >
@@ -742,7 +743,7 @@ export const FocusCalendarView: React.FC = () => {
                       <div
                         className={`w-7 h-7 mt-0.5 rounded-full flex items-center justify-center text-xs font-bold ${
                           isCurrent
-                            ? 'border-2 border-[#58CC02] text-[#58CC02]'
+                            ? 'border-2 border-[var(--primary-accent)] text-[var(--primary-accent)]'
                             : 'text-[var(--text-hover)]'
                         }`}
                       >
@@ -870,8 +871,8 @@ export const FocusCalendarView: React.FC = () => {
                           className="absolute left-0 right-0 z-30 pointer-events-none flex items-center -translate-y-1/2"
                           style={{ top: `${nowIndicatorTop}px` }}
                         >
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#FF4B4B] -ml-1 shrink-0 ring-2 ring-[var(--canvas-bg)]" />
-                          <div className="flex-1 h-[2px] bg-[#FF4B4B]" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#f7768e] -ml-1 shrink-0 ring-2 ring-[var(--canvas-bg)]" />
+                          <div className="flex-1 h-[2px] bg-[#f7768e]" />
                         </div>
                       )}
 
@@ -881,7 +882,7 @@ export const FocusCalendarView: React.FC = () => {
                           style={{
                             top: `${liveTop}px`,
                             height: `${liveHeight}px`,
-                            borderLeftColor: selectedTag?.color || '#58CC02',
+                            borderLeftColor: selectedTag?.color || '#7aa2f7',
                           }}
                           className="absolute left-1 right-1 z-20 rounded-md border-l-4 border-t border-r border-b border-[var(--border-color)] p-1.5 flex flex-col justify-between overflow-hidden bg-[var(--node-bg)] shadow-xs"
                         >
@@ -889,7 +890,7 @@ export const FocusCalendarView: React.FC = () => {
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span
                                 className="w-2 h-2 rounded-full shrink-0"
-                                style={{ backgroundColor: selectedTag?.color || '#58CC02' }}
+                                style={{ backgroundColor: selectedTag?.color || '#7aa2f7' }}
                               />
                               <span className="text-xs font-bold text-[var(--text-hover)] truncate">
                                 {selectedTag?.name || 'Focus'}
@@ -930,7 +931,7 @@ export const FocusCalendarView: React.FC = () => {
                                 t.name.toLowerCase() === siteDomain.toLowerCase() ||
                                 getDomainTagName(t.name).toLowerCase() === siteDisplayName.toLowerCase()
                             );
-                            const siteColor = siteTag?.color || '#58CC02';
+                            const siteColor = siteTag?.color || '#7aa2f7';
 
                             return (
                               <div
@@ -944,13 +945,13 @@ export const FocusCalendarView: React.FC = () => {
                               >
                                 <div className="flex items-center justify-between gap-1 min-w-0">
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="w-2 h-2 rounded-full shrink-0 bg-[#58CC02] animate-pulse" />
+                                    <span className="w-2 h-2 rounded-full shrink-0 bg-[#7aa2f7] animate-pulse" />
                                     <span className="text-xs font-bold text-[var(--text-hover)] truncate">
                                       {siteDisplayName}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
-                                    <span className="text-[10px] font-mono font-bold text-[#58CC02]">
+                                    <span className="text-[10px] font-mono font-bold text-[#7aa2f7]">
                                       {formatDuration(siteElapsed)}
                                     </span>
                                     <button

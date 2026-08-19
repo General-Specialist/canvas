@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Tag, Plus } from '@phosphor-icons/react';
+import { X, Check, Tag, Plus } from '../icons';
 import { TAG_COLORS } from '../../types/focus';
 import { useFocus } from '../../context/FocusContext';
 
@@ -49,7 +49,7 @@ export const TagManagerModal: React.FC<TagManagerModalProps> = ({ isOpen, onClos
         {/* Modal Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Tag size={18} className="text-[#58CC02]" weight="bold" />
+            <Tag size={18} className="text-[var(--primary-accent)]" weight="bold" />
             <h3 className="text-sm font-bold text-[var(--text-hover)]">Manage Tags</h3>
           </div>
           <button
@@ -78,7 +78,7 @@ export const TagManagerModal: React.FC<TagManagerModalProps> = ({ isOpen, onClos
               onChange={(e) => setTagInput(e.target.value)}
               placeholder="e.g. Studying, Exercise, Admin, Reading"
               autoFocus
-              className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-normal)] placeholder:text-[var(--text-light)]/50 focus:outline-none focus:border-[#58CC02] transition-colors"
+              className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-normal)] placeholder:text-[var(--text-light)]/50 focus:outline-none focus:border-[var(--primary-accent)] transition-colors"
             />
 
             {/* Live parsed previews when typing multiple tags */}
@@ -130,7 +130,7 @@ export const TagManagerModal: React.FC<TagManagerModalProps> = ({ isOpen, onClos
           <button
             type="submit"
             disabled={parsedTagNames.length === 0}
-            className="w-full py-2 rounded-lg bg-[#58CC02] text-white text-xs font-semibold hover:bg-[#46A302] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            className="w-full py-2 rounded-lg bg-[var(--primary-accent)] text-white dark:text-[#16161e] text-xs font-bold hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
           >
             <Plus size={14} weight="bold" />
             <span>
@@ -204,7 +204,7 @@ export const TagManagerModal: React.FC<TagManagerModalProps> = ({ isOpen, onClos
                   <button
                     type="button"
                     onClick={() => deleteTag(tag.id)}
-                    className="text-[var(--text-light)] hover:text-[#FF4B4B] p-1 transition-colors cursor-pointer"
+                    className="text-[var(--text-light)] hover:text-[#f7768e] p-1 transition-colors cursor-pointer"
                     title="Delete tag"
                   >
                     <X size={13} />

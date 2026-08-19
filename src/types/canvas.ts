@@ -15,7 +15,6 @@ interface EdgeJunctionNodeData {
 
 export interface GroupNodeData {
   title?: string;
-  color?: string;
   [key: string]: unknown;
 }
 

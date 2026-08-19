@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useSleep } from '../../context/SleepContext';
 import { calculateSleepDurationMinutes, formatFriendlyDate } from '../../utils/sleepStorage';
 import { SleepEntry } from '../../types/sleep';
-import { ChartLineUp, Bed, Lightning } from '@phosphor-icons/react';
+import { ChartLineUp, Bed, Lightning } from '../icons';
 
 export const SleepTrendsChart: React.FC = () => {
   const { entries, openEditEntryForm } = useSleep();
@@ -65,7 +65,7 @@ export const SleepTrendsChart: React.FC = () => {
       {/* Chart Header & Legend */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <ChartLineUp size={18} className="text-[#58CC02]" />
+          <ChartLineUp size={18} className="text-[var(--primary-accent)]" />
           <h3 className="text-sm font-bold text-[var(--text-hover)]">
             Sleep Duration & Productivity Trends
           </h3>
@@ -73,11 +73,11 @@ export const SleepTrendsChart: React.FC = () => {
 
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5 text-[var(--text-normal)]">
-            <span className="w-3 h-3 rounded-sm bg-[#58CC02]/70 inline-block border border-[#58CC02]" />
+            <span className="w-3 h-3 rounded-sm bg-[#7aa2f7]/70 inline-block border border-[#7aa2f7]" />
             <span>Sleep Duration (Hours)</span>
           </div>
           <div className="flex items-center gap-1.5 text-[var(--text-normal)]">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#1CB0F6] inline-block border-2 border-white" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#7dcfff] inline-block border-2 border-white dark:border-[#1f2335]" />
             <span>Productivity (Score 1-10)</span>
           </div>
         </div>
@@ -91,8 +91,8 @@ export const SleepTrendsChart: React.FC = () => {
         >
           <defs>
             <linearGradient id="sleepBarGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#58CC02" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#58CC02" stopOpacity="0.25" />
+              <stop offset="0%" stopColor="#7aa2f7" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#7aa2f7" stopOpacity="0.25" />
             </linearGradient>
           </defs>
 
@@ -155,8 +155,8 @@ export const SleepTrendsChart: React.FC = () => {
                   width={barWidth}
                   height={barHeight}
                   rx="6"
-                  fill={isHovered ? '#58CC02' : 'url(#sleepBarGradient)'}
-                  stroke="#58CC02"
+                  fill={isHovered ? '#7aa2f7' : 'url(#sleepBarGradient)'}
+                  stroke="#7aa2f7"
                   strokeWidth={isHovered ? '2' : '1'}
                   className="transition-all duration-150"
                 />
@@ -180,7 +180,7 @@ export const SleepTrendsChart: React.FC = () => {
             <path
               d={linePathD}
               fill="none"
-              stroke="#1CB0F6"
+              stroke="#7dcfff"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -202,7 +202,7 @@ export const SleepTrendsChart: React.FC = () => {
                   cx={pt.x}
                   cy={pt.y}
                   r={isHovered ? 6 : 4.5}
-                  fill="#1CB0F6"
+                  fill="#7dcfff"
                   stroke="var(--node-bg)"
                   strokeWidth="2"
                   className="transition-transform duration-150"
@@ -222,7 +222,7 @@ export const SleepTrendsChart: React.FC = () => {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-[#58CC02] font-semibold">
+              <div className="flex items-center gap-1 text-[#7aa2f7] font-semibold">
                 <Bed size={14} />
                 <span>
                   {calculateSleepDurationMinutes(hoveredEntry.bedTime, hoveredEntry.wakeTime) / 60}h
@@ -231,7 +231,7 @@ export const SleepTrendsChart: React.FC = () => {
                   ({hoveredEntry.bedTime} → {hoveredEntry.wakeTime})
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-[#1CB0F6] font-semibold">
+              <div className="flex items-center gap-1 text-[#7dcfff] font-semibold">
                 <Lightning size={14} weight="fill" />
                 <span>{hoveredEntry.productivity.toFixed(1)} / 10</span>
               </div>
@@ -243,7 +243,7 @@ export const SleepTrendsChart: React.FC = () => {
               {hoveredEntry.factors.triggeringEvent && (
                 <>
                   <span>•</span>
-                  <span className="text-[#FF4B4B]">⚠️ Trigger Event</span>
+                  <span className="text-[#f7768e]">⚠️ Trigger Event</span>
                 </>
               )}
             </div>

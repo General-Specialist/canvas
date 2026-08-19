@@ -47,25 +47,25 @@ export const DEFAULT_BLOCKER_CONFIG: FocusBlockerConfig = {
 };
 
 export const DEFAULT_TAGS: FocusTag[] = [
-  { id: 'tag-coding', name: 'Coding', color: '#58CC02', createdAt: 1 },
-  { id: 'tag-research', name: 'Research', color: '#1CB0F6', createdAt: 2 },
-  { id: 'tag-writing', name: 'Writing', color: '#CE82FF', createdAt: 3 },
-  { id: 'tag-design', name: 'Design', color: '#FF9600', createdAt: 4 },
-  { id: 'tag-reading', name: 'Reading', color: '#FFC800', createdAt: 5 },
-  { id: 'tag-planning', name: 'Planning', color: '#2B70C9', createdAt: 6 },
+  { id: 'tag-coding', name: 'Coding', color: '#82aaff', createdAt: 1 },
+  { id: 'tag-research', name: 'Research', color: '#86e1fc', createdAt: 2 },
+  { id: 'tag-writing', name: 'Writing', color: '#c099ff', createdAt: 3 },
+  { id: 'tag-design', name: 'Design', color: '#fca7a7', createdAt: 4 },
+  { id: 'tag-reading', name: 'Reading', color: '#ebd69b', createdAt: 5 },
+  { id: 'tag-planning', name: 'Planning', color: '#a9b1d6', createdAt: 6 },
 ];
 
 export const TAG_COLORS = [
-  '#58CC02', // Duolingo Green
-  '#1CB0F6', // Sky Blue
-  '#CE82FF', // Purple
-  '#FF9600', // Orange
-  '#FFC800', // Yellow
-  '#FF4B4B', // Red
-  '#2B70C9', // Navy
-  '#00D2D3', // Teal
-  '#FF9FF3', // Pink
-  '#777777', // Gray
+  '#82aaff', // Soft Lavender Blue
+  '#86e1fc', // Muted Ice Cyan
+  '#c099ff', // Soft Muted Purple
+  '#9dcf8e', // Soft Muted Sage
+  '#fca7a7', // Soft Muted Peach / Rose
+  '#ebd69b', // Soft Oat / Sand
+  '#a9b1d6', // Soft Slate
+  '#7dcfff', // Soft Sky Cyan
+  '#b4e3dc', // Soft Muted Seafoam
+  '#787c99', // Muted Charcoal Slate
 ];
 
 /**

@@ -10,7 +10,7 @@ import {
   WarningCircle,
   Eye,
   EyeSlash,
-} from '@phosphor-icons/react';
+} from '../icons';
 import { useGoogleCalendar } from '../../context/GoogleCalendarContext';
 import { GCAL_PRESET_COLORS } from '../../types/googleCalendar';
 

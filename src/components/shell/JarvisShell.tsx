@@ -5,7 +5,7 @@ import {
   Sun,
   Moon,
   Bed,
-} from '@phosphor-icons/react';
+} from '../icons';
 import { AppId, JARVIS_APPS } from '../../types/navigation';
 import { Canvas } from '../Canvas';
 import { FocusApp } from '../focus/FocusApp';
@@ -97,7 +97,7 @@ export const JarvisShell: React.FC = () => {
                 title={`${app.name} (${app.shortcut})`}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer relative hover:bg-[var(--sidebar-hover-bg)] ${
                   isActive
-                    ? 'text-[#58CC02] border border-[#58CC02]'
+                    ? 'text-[var(--primary-accent)] border border-[var(--primary-accent)]/60 bg-[var(--primary-accent)]/10 shadow-xs'
                     : 'text-[var(--text-light)] hover:text-[var(--text-hover)] border border-transparent'
                 }`}
               >
@@ -113,7 +113,7 @@ export const JarvisShell: React.FC = () => {
                 {isFocusActiveRunning && !isActive && (
                   <span
                     className="absolute top-1 right-1 w-2 h-2 rounded-full ring-2 ring-[var(--sidebar-bg)]"
-                    style={{ backgroundColor: selectedTag?.color || '#58CC02' }}
+                    style={{ backgroundColor: selectedTag?.color || '#7aa2f7' }}
                   />
                 )}
               </button>
@@ -129,9 +129,9 @@ export const JarvisShell: React.FC = () => {
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
           >
             {theme === 'dark' ? (
-              <Sun size={20} className="text-[#FFC800]" />
+              <Sun size={20} className="text-[#e0af68]" />
             ) : (
-              <Moon size={20} className="text-[#2B70C9]" />
+              <Moon size={20} className="text-[#7aa2f7]" />
             )}
           </button>
         </div>

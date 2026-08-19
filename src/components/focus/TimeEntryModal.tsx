@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash, Play, Clock, Check } from '@phosphor-icons/react';
+import { X, Trash, Play, Clock, Check } from '../icons';
 import { useFocus } from '../../context/FocusContext';
 import { FocusSession } from '../../types/focus';
 import { formatLocalDateInput } from '../../utils/calendarUtils';
@@ -96,7 +96,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock size={18} className="text-[#58CC02]" weight="bold" />
+            <Clock size={18} className="text-[var(--primary-accent)]" weight="bold" />
             <h3 className="text-sm font-bold text-[var(--text-hover)]">
               {isEditing ? 'Edit Time Entry' : 'Log Time Entry'}
             </h3>
@@ -154,7 +154,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
                 type="date"
                 value={dateStr}
                 onChange={(e) => setDateStr(e.target.value)}
-                className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-normal)] focus:outline-none focus:border-[#58CC02]"
+                className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-normal)] focus:outline-none focus:border-[var(--primary-accent)]"
               />
             </div>
 
@@ -166,7 +166,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
                 type="time"
                 value={startTimeStr}
                 onChange={(e) => setStartTimeStr(e.target.value)}
-                className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-normal)] focus:outline-none focus:border-[#58CC02]"
+                className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-normal)] focus:outline-none focus:border-[var(--primary-accent)]"
               />
             </div>
 
@@ -178,7 +178,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
                 type="time"
                 value={endTimeStr}
                 onChange={(e) => setEndTimeStr(e.target.value)}
-                className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-normal)] focus:outline-none focus:border-[#58CC02]"
+                className="w-full bg-transparent border border-[var(--border-color)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-normal)] focus:outline-none focus:border-[var(--primary-accent)]"
               />
             </div>
           </div>
@@ -195,7 +195,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
                       onClose();
                     }
                   }}
-                  className="p-2 rounded-lg text-[var(--text-light)] hover:text-[#FF4B4B] border border-[var(--border-color)] hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer"
+                  className="p-2 rounded-lg text-[var(--text-light)] hover:text-[#f7768e] border border-[var(--border-color)] hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer"
                   title="Delete Entry"
                 >
                   <Trash size={15} />
@@ -208,7 +208,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
                       onClose();
                     }
                   }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-[#58CC02] border border-[var(--border-color)] hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-[var(--primary-accent)] border border-[var(--border-color)] hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer"
                 >
                   <Play size={13} weight="fill" />
                   <span>Continue</span>
@@ -228,7 +228,7 @@ export const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-lg bg-[#58CC02] text-white text-xs font-semibold hover:bg-[#46A302] transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-lg bg-[var(--primary-accent)] text-white dark:text-[#16161e] text-xs font-bold hover:brightness-110 transition-all cursor-pointer active:scale-95"
               >
                 {isEditing ? 'Save Changes' : 'Add Entry'}
               </button>

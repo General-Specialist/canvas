@@ -5,7 +5,7 @@ import {
   CheckCircle,
   MapPin,
   Calendar,
-} from '@phosphor-icons/react';
+} from '../icons';
 import { GoogleCalendarEvent } from '../../types/googleCalendar';
 import { useFocus } from '../../context/FocusContext';
 import { formatDuration } from '../../utils/calendarUtils';
@@ -164,7 +164,7 @@ export const GoogleEventDetailsModal: React.FC<GoogleEventDetailsModalProps> = (
           <button
             type="button"
             onClick={handleStartFocus}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-white bg-[#58CC02] hover:bg-[#46A302] transition-colors cursor-pointer shadow-xs"
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-white dark:text-[#16161e] bg-[var(--primary-accent)] hover:brightness-110 transition-all cursor-pointer shadow-xs active:scale-95"
           >
             <Play size={14} weight="fill" />
             <span>Start Focus</span>

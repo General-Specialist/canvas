@@ -37,31 +37,31 @@ export const FALL_ASLEEP_OPTIONS: FallAsleepSpeedOption[] = [
     value: 'very_fast',
     label: 'Very Fast',
     description: '< 10m',
-    iconColor: '#58CC02', // Duolingo green
+    iconColor: '#9ece6a', // Tokyo Green
   },
   {
     value: 'fast',
     label: 'Fast',
     description: '10-20m',
-    iconColor: '#89E219',
+    iconColor: '#73daca', // Tokyo Teal
   },
   {
     value: 'normal',
     label: 'Normal',
     description: '20-30m',
-    iconColor: '#1CB0F6', // Blue
+    iconColor: '#7aa2f7', // Tokyo Blue
   },
   {
     value: 'slow',
     label: 'Slow',
     description: '30-60m',
-    iconColor: '#FF9600', // Orange
+    iconColor: '#ff9e64', // Tokyo Orange
   },
   {
     value: 'very_slow',
     label: 'Very Slow',
     description: '> 60m',
-    iconColor: '#FF4B4B', // Cardinal red
+    iconColor: '#f7768e', // Tokyo Red
   },
 ];
 
