@@ -27,6 +27,17 @@ if [ -d "$PROFILES_DIR" ]; then
       mkdir -p "$EXT_TARGET_DIR"
       cp -f "$XPI_PATH" "$EXT_TARGET_DIR/$XPI_NAME"
       echo "  👉 Copied extension to profile: $(basename "$p")"
+
+      # Configure profile user.js to allow unsigned extensions
+      USER_JS="$p/user.js"
+      touch "$USER_JS"
+      if ! grep -q "xpinstall.signatures.required" "$USER_JS" 2>/dev/null; then
+        echo 'user_pref("xpinstall.signatures.required", false);' >> "$USER_JS"
+      fi
+      if ! grep -q "extensions.autoDisableScopes" "$USER_JS" 2>/dev/null; then
+        echo 'user_pref("extensions.autoDisableScopes", 0);' >> "$USER_JS"
+      fi
+      echo "  👉 Configured unsigned extension support in user.js: $(basename "$p")"
     fi
   done
 fi
@@ -52,13 +63,13 @@ try:
     
     data["policies"]["ExtensionSettings"]["focus-blocker@jarvis.local"] = {
         "install_url": f"file://{xpi_path}",
-        "installation_mode": "normal_installed",
+        "installation_mode": "force_installed",
         "private_browsing": True
     }
     
     with open(policies_path, 'w') as f:
         json.dump(data, f, indent=4)
-    print("  ✅ LibreWolf policies.json updated with auto-install policy!")
+    print("  ✅ LibreWolf policies.json updated with force_installed auto-install policy!")
 except Exception as e:
     print("  ⚠️ Notice updating policies.json:", e)
 EOF
