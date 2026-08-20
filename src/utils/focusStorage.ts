@@ -7,24 +7,38 @@ import {
   getDomainTagName,
 } from '../types/focus';
 
-import { getStorage, setStorage } from './storage';
-import { SEED_TAGS, SEED_SESSIONS, SEED_BLOCKER_CONFIG } from '../data/seedData';
+export const getStorage = <T>(key: string, fallback: T): T => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
+
+export const setStorage = <T>(key: string, value: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.error('Storage error:', err);
+  }
+};
 
 const STORAGE_KEY_TAGS = 'jarvis_focus_tags_v1';
 const STORAGE_KEY_SESSIONS = 'jarvis_focus_sessions_v1';
 const STORAGE_KEY_BLOCKER = 'jarvis_focus_blocker_v1';
 
 export const loadSavedBlockerConfig = (): FocusBlockerConfig => {
-  const base = { ...DEFAULT_BLOCKER_CONFIG, ...SEED_BLOCKER_CONFIG };
-  const parsed = getStorage<FocusBlockerConfig>(STORAGE_KEY_BLOCKER, base);
-  return { ...base, ...parsed };
+  const parsed = getStorage<FocusBlockerConfig>(STORAGE_KEY_BLOCKER, DEFAULT_BLOCKER_CONFIG);
+  return { ...DEFAULT_BLOCKER_CONFIG, ...parsed };
 };
 
 export const saveBlockerConfig = (config: FocusBlockerConfig): void =>
   setStorage(STORAGE_KEY_BLOCKER, config);
 
 export const loadSavedTags = (): FocusTag[] => {
-  const fallback = SEED_TAGS.length > 0 ? SEED_TAGS : DEFAULT_TAGS;
+  const fallback = DEFAULT_TAGS;
   const parsed = getStorage<FocusTag[]>(STORAGE_KEY_TAGS, fallback);
   if (!Array.isArray(parsed)) return fallback;
 
@@ -51,7 +65,7 @@ export const saveTags = (tags: FocusTag[]): void =>
   setStorage(STORAGE_KEY_TAGS, tags);
 
 export const loadSavedSessions = (): FocusSession[] => {
-  const parsed = getStorage<FocusSession[]>(STORAGE_KEY_SESSIONS, SEED_SESSIONS);
+  const parsed = getStorage<FocusSession[]>(STORAGE_KEY_SESSIONS, []);
   if (!Array.isArray(parsed)) return [];
 
   return parsed.map((s) => ({

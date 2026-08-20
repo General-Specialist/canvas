@@ -5,14 +5,6 @@ import {
   JarvisDataBackupV1,
 } from '../types/sync';
 import {
-  loadSavedEdges,
-  loadSavedNodes,
-  loadSavedViewport,
-  saveEdges,
-  saveNodes,
-  saveViewport,
-} from './storage';
-import {
   loadSavedBlockerConfig,
   loadSavedSessions,
   loadSavedTags,
@@ -28,9 +20,6 @@ import {
   saveGCalEvents,
   saveShowGCalPreference,
 } from './googleCalendarSync';
-import { loadSavedSleepEntries, saveSleepEntries } from './sleepStorage';
-
-
 
 const STORAGE_KEY_GIST_AUTO_ID = 'jarvis_auto_gist_id';
 
@@ -59,15 +48,9 @@ export const saveGistSyncConfig = (config: GistSyncConfig): void => {
  * Bundles all application state into a single versioned backup structure.
  */
 export const serializeAppData = (): JarvisDataBackupV1 => {
-  const canvasNodes = loadSavedNodes();
-  const canvasEdges = loadSavedEdges();
-  const canvasViewport = loadSavedViewport();
-
   const focusTags = loadSavedTags();
   const focusSessions = loadSavedSessions();
   const focusBlockerConfig = loadSavedBlockerConfig();
-
-  const sleepEntries = loadSavedSleepEntries();
 
   const gcalFeeds = loadSavedFeeds();
   const gcalEvents = loadSavedGCalEvents();
@@ -76,7 +59,6 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
   let theme = 'dark';
   let viewMode = 'week';
   let hourHeight = 64;
-  let activeApp = 'canvas';
 
   try {
     const savedView = localStorage.getItem('jarvis_focus_view_mode_v1');
@@ -84,19 +66,13 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
 
     const savedHeight = localStorage.getItem('jarvis_focus_hour_height_v1');
     if (savedHeight) hourHeight = parseInt(savedHeight, 10) || 64;
-
-    const savedApp = localStorage.getItem('jarvis_active_app');
-    if (savedApp) activeApp = savedApp;
   } catch {}
 
   const totalFocusSeconds = focusSessions.reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
 
   const metadata: AppBackupMetadata = {
-    nodeCount: canvasNodes.length,
-    edgeCount: canvasEdges.length,
     tagCount: focusTags.length,
     sessionCount: focusSessions.length,
-    sleepCount: sleepEntries.length,
     gcalFeedCount: gcalFeeds.length,
     totalFocusSeconds,
   };
@@ -107,20 +83,15 @@ export const serializeAppData = (): JarvisDataBackupV1 => {
     exportedAt: Date.now(),
     metadata,
     data: {
-      canvasNodes,
-      canvasEdges,
-      canvasViewport,
       focusTags,
       focusSessions,
       focusBlockerConfig,
-      sleepEntries,
       gcalFeeds,
       gcalEvents,
       gcalShowPreference,
       theme,
       viewMode,
       hourHeight,
-      activeApp,
     },
   };
 };
@@ -133,7 +104,6 @@ export const validateBackupPayload = (payload: unknown): payload is JarvisDataBa
   const p = payload as Record<string, unknown>;
   return (p.app === 'jarvis' || p.appName === 'Jarvis') && typeof p.data === 'object' && p.data !== null;
 };
-
 
 /**
  * Validates and restores a master backup payload into localStorage.
@@ -150,23 +120,17 @@ export const deserializeAppData = (
     const incoming = backup.data;
 
     if (mode === 'replace') {
-      if (incoming.canvasNodes) saveNodes(incoming.canvasNodes);
-      if (incoming.canvasEdges) saveEdges(incoming.canvasEdges);
-      if (incoming.canvasViewport) saveViewport(incoming.canvasViewport);
       if (incoming.focusTags) saveTags(incoming.focusTags);
       if (incoming.focusSessions) saveSessions(incoming.focusSessions);
       if (incoming.focusBlockerConfig) saveBlockerConfig(incoming.focusBlockerConfig);
-      if (incoming.sleepEntries) saveSleepEntries(incoming.sleepEntries);
       if (incoming.gcalFeeds) saveFeeds(incoming.gcalFeeds);
       if (incoming.gcalEvents) saveGCalEvents(incoming.gcalEvents);
       if (typeof incoming.gcalShowPreference === 'boolean') saveShowGCalPreference(incoming.gcalShowPreference);
 
       localStorage.setItem('jarvis_theme', 'dark');
-      localStorage.setItem('canvas_theme', 'dark');
 
       if (incoming.viewMode) localStorage.setItem('jarvis_focus_view_mode_v1', incoming.viewMode);
       if (incoming.hourHeight) localStorage.setItem('jarvis_focus_hour_height_v1', String(incoming.hourHeight));
-      if (incoming.activeApp) localStorage.setItem('jarvis_active_app', incoming.activeApp);
 
       return {
         success: true,
@@ -180,27 +144,18 @@ export const deserializeAppData = (
         return [[...current, ...additions], additions.length];
       };
 
-      const [mergedNodes, newNodesCount] = mergeList(loadSavedNodes(), incoming.canvasNodes, (n) => n.id);
-      saveNodes(mergedNodes);
-
-      const [mergedEdges] = mergeList(loadSavedEdges(), incoming.canvasEdges, (e) => e.id);
-      saveEdges(mergedEdges);
-
       const [mergedTags, newTagsCount] = mergeList(loadSavedTags(), incoming.focusTags, (t) => t.id);
       saveTags(mergedTags);
 
       const [mergedSessions, newSessionsCount] = mergeList(loadSavedSessions(), incoming.focusSessions, (s) => s.id);
       saveSessions(mergedSessions.sort((a, b) => b.endedAt - a.endedAt));
 
-      const [mergedSleep, newSleepCount] = mergeList(loadSavedSleepEntries(), incoming.sleepEntries, (s) => s.date);
-      saveSleepEntries(mergedSleep.sort((a, b) => b.date.localeCompare(a.date)));
-
       const [mergedFeeds] = mergeList(loadSavedFeeds(), incoming.gcalFeeds, (f) => f.url);
       saveFeeds(mergedFeeds);
 
       return {
         success: true,
-        message: `Successfully merged backup (+${newNodesCount} notes, +${newSessionsCount} sessions, +${newSleepCount} sleep logs, +${newTagsCount} tags).`,
+        message: `Successfully merged backup (+${newSessionsCount} sessions, +${newTagsCount} tags).`,
       };
     }
 
@@ -209,7 +164,6 @@ export const deserializeAppData = (
     return { success: false, message: `Failed to restore data: ${(err as Error).message}` };
   }
 };
-
 
 /**
  * Downloads a `.json` backup file.
@@ -223,7 +177,7 @@ export const downloadBackupAsFile = (): void => {
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = `jarvis-backup-${dateStr}.json`;
+  a.download = `jarvis-focus-backup-${dateStr}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -253,7 +207,7 @@ export const pushToGitHubGist = async (
     const dateStr = new Date().toLocaleString();
 
     const gistPayload = {
-      description: `Jarvis Canvas & Focus Vault Backup (Synced ${dateStr})`,
+      description: `Jarvis Focus Vault Backup (Synced ${dateStr})`,
       public: false,
       files: {
         'jarvis-backup.json': {

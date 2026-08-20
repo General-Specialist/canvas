@@ -1,7 +1,11 @@
-# Tauri + React + Typescript
+# Jarvis Focus
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+A fast, lightweight Focus & Time Tracking desktop application built with Tauri, React, Vite, and Tailwind CSS.
 
-## Recommended IDE Setup
+## Features
+- **Focus Timer & Time Tracking**: Track Pomodoro sessions, custom tags, and manual time entries.
+- **Interactive Calendar Views**: Day, Week, and Month visualization with zoom and tag distribution.
+- **Distraction Blocker**: Integrates with LibreWolf/Firefox extension to block distracting websites during focus sessions.
+- **Google Calendar Sync**: Native iCal feed synchronization.
+- **Private Gist Cloud Backup**: Auto-sync and backup/restore with GitHub Gists.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)

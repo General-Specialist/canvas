@@ -1,15 +1,9 @@
-import { CanvasEdge, CanvasNode } from './canvas';
 import { FocusBlockerConfig, FocusSession, FocusTag } from './focus';
 import { GoogleCalendarEvent, GoogleCalendarFeed } from './googleCalendar';
-import { SleepEntry } from './sleep';
-import { Viewport } from '@xyflow/react';
 
 export interface AppBackupMetadata {
-  nodeCount: number;
-  edgeCount: number;
   tagCount: number;
   sessionCount: number;
-  sleepCount?: number;
   gcalFeedCount: number;
   totalFocusSeconds: number;
 }
@@ -20,23 +14,17 @@ export interface JarvisDataBackupV1 {
   exportedAt: number;
   metadata: AppBackupMetadata;
   data: {
-    canvasNodes: CanvasNode[];
-    canvasEdges: CanvasEdge[];
-    canvasViewport: Viewport;
     focusTags: FocusTag[];
     focusSessions: FocusSession[];
     focusBlockerConfig: FocusBlockerConfig;
-    sleepEntries?: SleepEntry[];
     gcalFeeds: GoogleCalendarFeed[];
     gcalEvents?: GoogleCalendarEvent[];
     gcalShowPreference?: boolean;
     theme?: string;
     viewMode?: string;
     hourHeight?: number;
-    activeApp?: string;
   };
 }
-
 
 export interface GistSyncConfig {
   enabled: boolean;

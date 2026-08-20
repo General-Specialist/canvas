@@ -1,20 +1,19 @@
 import { GoogleCalendarEvent, GoogleCalendarFeed } from '../types/googleCalendar';
 import { parseIcsContent } from './icalParser';
-import { getStorage, setStorage } from './storage';
-import { SEED_GCAL_FEEDS, SEED_GCAL_EVENTS } from '../data/seedData';
+import { getStorage, setStorage } from './focusStorage';
 
 const STORAGE_KEY_FEEDS = 'jarvis_google_calendars_v1';
 const STORAGE_KEY_EVENTS = 'jarvis_google_calendar_events_v1';
 const STORAGE_KEY_SHOW_GCAL = 'jarvis_show_gcal_events_v1';
 
 export const loadSavedFeeds = (): GoogleCalendarFeed[] =>
-  getStorage<GoogleCalendarFeed[]>(STORAGE_KEY_FEEDS, SEED_GCAL_FEEDS);
+  getStorage<GoogleCalendarFeed[]>(STORAGE_KEY_FEEDS, []);
 
 export const saveFeeds = (feeds: GoogleCalendarFeed[]): void =>
   setStorage(STORAGE_KEY_FEEDS, feeds);
 
 export const loadSavedGCalEvents = (): GoogleCalendarEvent[] =>
-  getStorage<GoogleCalendarEvent[]>(STORAGE_KEY_EVENTS, SEED_GCAL_EVENTS);
+  getStorage<GoogleCalendarEvent[]>(STORAGE_KEY_EVENTS, []);
 
 export const saveGCalEvents = (events: GoogleCalendarEvent[]): void =>
   setStorage(STORAGE_KEY_EVENTS, events);

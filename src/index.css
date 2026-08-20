@@ -41,17 +41,6 @@
   --primary-accent: #7aa2f7;
   --primary-accent-hover: #608ef6;
   --primary-accent-text: #16161e;
-
-  --node-bg: #1f2335;
-  --node-border: #292e42;
-  --node-hover-ring: #bb9af7;
-  --node-selected-ring: #7aa2f7;
-  --handle-bg: #7aa2f7;
-  --handle-border: #16161e;
-  --edge-stroke: #3b4261;
-  --edge-stroke-selected: #7aa2f7;
-  --wikilink-color: #7dcfff;
-  --wikilink-hover: #bb9af7;
 }
 
 @layer base {
@@ -69,93 +58,6 @@
   textarea {
     field-sizing: content;
   }
-}
-
-/* React Flow Custom Overrides using strictly defined theme variables */
-.react-flow__background {
-  background-color: var(--canvas-bg) !important;
-}
-
-.react-flow__handle {
-  width: 12px !important;
-  height: 12px !important;
-  background-color: var(--handle-bg) !important;
-  border: 2px solid var(--handle-border) !important;
-  border-radius: 9999px !important;
-  z-index: 10 !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease !important;
-}
-
-.react-flow__node:hover .react-flow__handle,
-.react-flow__node:focus-within .react-flow__handle,
-.react-flow__handle-connecting,
-.react-flow__handle-valid {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.react-flow__handle:hover {
-  background-color: var(--text-hover) !important;
-}
-
-.react-flow__edge-path {
-  stroke: var(--edge-stroke) !important;
-  stroke-width: 2.5px !important;
-  transition: stroke 0.2s ease, stroke-width 0.2s ease;
-}
-
-.react-flow__edge:hover .react-flow__edge-path {
-  stroke-width: 3.5px !important;
-  stroke: var(--edge-stroke-selected) !important;
-}
-
-.react-flow__edge.selected .react-flow__edge-path {
-  stroke-width: 3.5px !important;
-  stroke: var(--edge-stroke-selected) !important;
-}
-
-.react-flow__marker path {
-  fill: var(--edge-stroke) !important;
-  stroke: var(--edge-stroke) !important;
-  transition: fill 0.2s ease, stroke 0.2s ease;
-}
-
-.react-flow__edge:hover .react-flow__marker path,
-.react-flow__edge.selected .react-flow__marker path {
-  fill: var(--edge-stroke-selected) !important;
-  stroke: var(--edge-stroke-selected) !important;
-}
-
-.react-flow__node {
-  border-radius: 12px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transform-style: flat;
-}
-
-.react-flow__viewport {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.react-flow__node.selected {
-  outline: 2px solid var(--node-selected-ring) !important;
-  box-shadow: none !important;
-}
-
-.react-flow__node-groupNode.selected {
-  z-index: unset !important;
-}
-
-.react-flow__attribution {
-  display: none !important;
-}
-
-.react-flow__edgelabel-renderer {
-  z-index: 1000 !important;
-  pointer-events: none !important;
 }
 
 /* Hide scrollbars globally */
@@ -181,69 +83,6 @@ input[type=number] {
   appearance: textfield;
 }
 
-/* Typst math and document custom styles */
-
-.typst-render-output {
-  color: inherit;
-}
-
-.typst-math-inline {
-  display: inline-flex;
-  align-items: center;
-  vertical-align: -0.22em;
-  margin: 0 0.15em;
-  line-height: 1;
-}
-
-.typst-math-inline svg,
-.typst-math-inline-svg {
-  display: inline-block;
-  vertical-align: middle;
-  height: 1.28em;
-  width: auto;
-  max-width: 100%;
-}
-
-.typst-math-display {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0.6em 0;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-
-.typst-math-display svg,
-.typst-math-display-svg {
-  display: block;
-  max-height: 220px;
-  height: auto;
-  width: auto;
-  max-width: 100%;
-}
-
-.typst-doc-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-}
-
-/* Ensure glyphs and math strokes inherit theme text color */
-.typst-render-output svg .outline_glyph,
-.typst-render-output svg .outline_glyph path,
-.typst-render-output svg .typst-text,
-.typst-render-output svg g[fill]:not([fill="none"]):not([fill="transparent"]) {
-  fill: currentColor !important;
-}
-
-.typst-render-output svg .typst-shape,
-.typst-render-output svg path:not(.outline_glyph):not(.pseudo-link),
-.typst-render-output svg line {
-  stroke: currentColor !important;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -251,7 +90,6 @@ input[type=number] {
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 

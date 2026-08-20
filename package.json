@@ -12,12 +12,8 @@
     "extension:dev": "npx -y web-ext run --firefox=/Applications/LibreWolf.app/Contents/MacOS/librewolf --source-dir=./extension"
   },
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.7.0",
-    "@myriaddreamin/typst-ts-web-compiler": "^0.7.0",
-    "@myriaddreamin/typst.ts": "^0.7.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2.11.1",
-    "@xyflow/react": "^12.11.2",
     "lucide-react": "^1.32.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
